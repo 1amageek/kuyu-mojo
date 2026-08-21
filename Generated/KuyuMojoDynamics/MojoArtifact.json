@@ -1,6 +1,6 @@
 {
   "abiVersion" : 1,
-  "artifactDigest" : "bdece09559ebb25fc58e68245957ed38f636140be8afe5e2914e2c73a6aff04b",
+  "artifactDigest" : "f947ad6dfe03d4e2c73032836b394db8b15325eb1f3aa6db09fb86e3e3879088",
   "artifactIdentity" : {
     "artifactName" : "SwiftMojo_KuyuMojoDynamics_ABI.xcframework",
     "libraryName" : "libSwiftMojo_KuyuMojoDynamics_ABI.a",
@@ -11,8 +11,13 @@
   "artifacts" : [
     {
       "adapter" : "appleXCFramework",
-      "digest" : "e3189eb287fe39abe6a0a62eddb09878982de79f693b4840b7eb54812a38532c",
+      "digest" : "a28ceaf3a30592158b7f043ea31a99865dddd4d1b23500fe4762ed1be79796bd",
       "name" : "SwiftMojo_KuyuMojoDynamics_ABI.xcframework"
+    },
+    {
+      "adapter" : "linuxStaticLibraryBundle",
+      "digest" : "19f39e354072328b68eccc54ac00debc4c4ac738e7cd8bf32e9f1f1a541d1b02",
+      "name" : "SwiftMojo_KuyuMojoDynamics_ABI.artifactbundle"
     }
   ],
   "bindings" : [
@@ -31,13 +36,21 @@
     }
   ],
   "generatedSourceDigest" : "91b2abae9fb1ec7811bd2236dec38fc567f4818a348813b36a47ed5a08c75456",
-  "generationPipelineDigest" : "b093ddfe6fb6492c8e68d0446d104bd8eaef15a4079b4a82397472841f309883",
+  "generationPipelineDigest" : "0d6953e8ae29b9dd6d266b8c6f27781b2031f8a3c81711005cfc2ea52a258ad5",
   "inputGraphDigest" : "17ccc1dafcd1a39fe839f86cd62aad3c592f740eac953e1dc288834373f29d4d",
   "inputGraphIdentifier" : 1714958704409944991,
   "schemaVersion" : 5,
   "slices" : [
     {
-      "archiveDigest" : "f0d94e61905f48e831babd6f6100cd3a7f91e1637a42aeb67a0ecc4a7a4f9dfb",
+      "archiveDigest" : "c75748ded8452c9409d1cdc4375fa2fb0c275fc2b3793b61ac1fc1e7ab9b253d",
+      "libraryIdentifier" : "linux-234e17a28cd31bbdd7861545e26b882a5e96f4b155fa3922926bac590e206378",
+      "target" : {
+        "cpu" : "generic",
+        "triple" : "aarch64-unknown-linux-gnu"
+      }
+    },
+    {
+      "archiveDigest" : "985be108de262c8e67ab416b9b304c0c2ca592c7b4be26d7a4f139bd7c91828e",
       "libraryIdentifier" : "macos-arm64",
       "target" : {
         "cpu" : "generic",

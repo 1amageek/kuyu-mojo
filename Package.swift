@@ -22,13 +22,17 @@ let package = Package(
         .package(path: "../kuyu-physics"),
         .package(
             url: "https://github.com/1amageek/swift-mojo.git",
-            revision: "9382a34b571e2448afb8aa7503dfb4689bf10e55"
+            revision: "4f3f2e70e176be9f9698d03d1041ddf9a5698433"
         ),
     ],
     targets: [
         .binaryTarget(
             name: "SwiftMojo_KuyuMojoDynamics_ABI",
             path: "Generated/KuyuMojoDynamics/SwiftMojo_KuyuMojoDynamics_ABI.xcframework"
+        ),
+        .binaryTarget(
+            name: "SwiftMojo_KuyuMojoDynamics_ABI_Linux",
+            path: "Generated/KuyuMojoDynamics/SwiftMojo_KuyuMojoDynamics_ABI.artifactbundle"
         ),
         .target(
             name: "KuyuMojoCore"
@@ -43,6 +47,10 @@ let package = Package(
                 .target(
                     name: "SwiftMojo_KuyuMojoDynamics_ABI",
                     condition: .when(platforms: [.macOS])
+                ),
+                .target(
+                    name: "SwiftMojo_KuyuMojoDynamics_ABI_Linux",
+                    condition: .when(platforms: [.linux])
                 ),
             ],
             plugins: [

@@ -8,6 +8,10 @@
         {
           "cpu": "generic",
           "triple": "arm64-apple-macosx26.0"
+        },
+        {
+          "cpu": "generic",
+          "triple": "aarch64-unknown-linux-gnu"
         }
       ]
     }

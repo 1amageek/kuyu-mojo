@@ -1,0 +1,4 @@
+module SwiftMojo_KuyuMojoDynamics_ABI {
+    header "SwiftMojo_KuyuMojoDynamics_ABI.h"
+    export *
+}
