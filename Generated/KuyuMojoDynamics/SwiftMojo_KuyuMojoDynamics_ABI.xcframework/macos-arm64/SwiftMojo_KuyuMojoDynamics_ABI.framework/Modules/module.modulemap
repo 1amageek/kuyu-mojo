@@ -1,0 +1,4 @@
+framework module SwiftMojo_KuyuMojoDynamics_ABI {
+    umbrella header "SwiftMojo_KuyuMojoDynamics_ABI.h"
+    export *
+}

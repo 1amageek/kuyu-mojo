@@ -1,0 +1,25 @@
+{
+  "entries" : [
+    {
+      "bindingID" : 1653368010419799125,
+      "generatedLine" : 2,
+      "source" : {
+        "column" : 1,
+        "file" : "Sources\/KuyuMojoDynamics\/MojoCanonicalGraphBinding.swift",
+        "line" : 3
+      }
+    },
+    {
+      "bindingID" : 1653368010419799125,
+      "generatedLine" : 32,
+      "source" : {
+        "column" : 1,
+        "file" : "Sources\/KuyuMojoDynamics\/MojoCanonicalGraphBinding.swift",
+        "line" : 3
+      }
+    }
+  ],
+  "generatedFile" : "Bindings.mojo",
+  "inputGraphDigest" : "17ccc1dafcd1a39fe839f86cd62aad3c592f740eac953e1dc288834373f29d4d",
+  "schemaVersion" : 1
+}

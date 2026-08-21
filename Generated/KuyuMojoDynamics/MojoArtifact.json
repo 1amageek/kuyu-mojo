@@ -1,0 +1,51 @@
+{
+  "abiVersion" : 1,
+  "artifactDigest" : "bdece09559ebb25fc58e68245957ed38f636140be8afe5e2914e2c73a6aff04b",
+  "artifactIdentity" : {
+    "artifactName" : "SwiftMojo_KuyuMojoDynamics_ABI.xcframework",
+    "libraryName" : "libSwiftMojo_KuyuMojoDynamics_ABI.a",
+    "moduleName" : "SwiftMojo_KuyuMojoDynamics_ABI",
+    "symbolPrefix" : "swift_mojo_f02a731c3b1b167be2708c289ebef05b89c003f83ae61bf3d3cb65b8d89601f1",
+    "targetName" : "KuyuMojoDynamics"
+  },
+  "artifacts" : [
+    {
+      "adapter" : "appleXCFramework",
+      "digest" : "e3189eb287fe39abe6a0a62eddb09878982de79f693b4840b7eb54812a38532c",
+      "name" : "SwiftMojo_KuyuMojoDynamics_ABI.xcframework"
+    }
+  ],
+  "bindings" : [
+    {
+      "abiDigest" : "16f1f17210110455b35b410ffeb960d4cae77aa037e1661397813b5ca3f16122",
+      "bindingID" : 1653368010419799125,
+      "functionName" : "executeCanonicalGraph",
+      "implementationDigest" : "95dcf8a149dfc2d0eab3a0c473cb644832310ea9f5cec14abaae5301faa18b17"
+    }
+  ],
+  "compilerVersion" : "Mojo 1.0.0 (ed45d567)",
+  "externalPackages" : [
+    {
+      "digest" : "b482e11b79f583ae63435dc26f2a812af5a37a62b43233343378fe05ce1ae66f",
+      "name" : "KuyuCanonicalDynamics"
+    }
+  ],
+  "generatedSourceDigest" : "91b2abae9fb1ec7811bd2236dec38fc567f4818a348813b36a47ed5a08c75456",
+  "generationPipelineDigest" : "b093ddfe6fb6492c8e68d0446d104bd8eaef15a4079b4a82397472841f309883",
+  "inputGraphDigest" : "17ccc1dafcd1a39fe839f86cd62aad3c592f740eac953e1dc288834373f29d4d",
+  "inputGraphIdentifier" : 1714958704409944991,
+  "schemaVersion" : 5,
+  "slices" : [
+    {
+      "archiveDigest" : "f0d94e61905f48e831babd6f6100cd3a7f91e1637a42aeb67a0ecc4a7a4f9dfb",
+      "libraryIdentifier" : "macos-arm64",
+      "target" : {
+        "cpu" : "generic",
+        "triple" : "arm64-apple-macosx26.0"
+      }
+    }
+  ],
+  "sourceGraphDigest" : "65d6579c1b6b1adae8b3d3002748d2dded0308b0b670a2bb7b968c20369784df",
+  "sourceGraphIdentifier" : 7338148970833320666,
+  "sourceMapDigest" : "b8b265d681f10238ba2e3290794f750dea170f94c77ab8764fb8209c44fe8f13"
+}

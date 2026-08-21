@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "targets": {
+    "KuyuMojoDynamics": {
+      "compilerVersion": "Mojo 1.0.0 (ed45d567)",
+      "mojoPackages": ["KuyuCanonicalDynamics"],
+      "slices": [
+        {
+          "cpu": "generic",
+          "triple": "arm64-apple-macosx26.0"
+        }
+      ]
+    }
+  }
+}
