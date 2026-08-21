@@ -12,15 +12,18 @@ CanonicalDynamicsProgram
                 -> Mojo Float64 / Float32 CPU execution
 ```
 
-The current runtime-verified slices are deterministic macOS CPU Float64 and
-Float32 execution. Float64 remains the semantic verifier. Float32 establishes
-the explicit precision boundary required by Apple Metal and NVIDIA CUDA; it is
-not evidence of accelerator execution. Both generated C ABIs are
+The current runtime-verified slices include deterministic macOS CPU Float64 and
+Float32 execution plus a bounded Apple M4 Metal Float32 hardware-acceptance
+kernel. Float64 remains the semantic verifier. Float32 establishes the explicit
+precision boundary required by Apple Metal and NVIDIA CUDA. Both generated C ABIs are
 cross-packaged in one Linux ARM64 static library artifact for native acceptance
-on Jetson. Cross-compilation is not native execution evidence. Metal, CUDA,
-session-owned device buffers, MAX runtime deployment, and native Jetson
-execution require their own capability and runtime acceptance before they
-become public runtime paths.
+on Jetson. Cross-compilation is not native execution evidence. The repo-owned
+Metal vector-add probe compiles for `metal:4`, packages an exact MAX runtime
+closure, verifies and executes both original and relocated bundles, and checks
+all 257 results after explicit transfer and synchronization. It proves the
+hardware/runtime mechanism, not Kuyu canonical or training compute. CUDA,
+attempt-owned session lifecycle, and native Jetson execution retain separate
+acceptance gates before they become public runtime paths.
 
 The pinned swift-mojo revision provides schema-1 accelerator runtime receipts,
 isolated worker bundles, and a public read-only bundle verifier. KuyuMojoCore's
@@ -31,8 +34,10 @@ CPU as a fallback. A real MAX Metal object and its four-library AsyncRT/KGEN
 closure were linked into exact bundle
 `38075467012f877bb5ea23daf3d4639aa175b478bfaca898706bd33e1ff72e77`,
 freshly verified, relocated, and executed with a minimal process environment.
-The worker created a real Apple M4 Max device context. This proves the macOS
-runtime deployment boundary, not a Metal compute kernel or Kuyu worker protocol.
+The first worker created a real Apple M4 Max device context. A second exact
+bundle executes the repo-owned Float32 Metal vector-add acceptance kernel. This
+proves the macOS runtime deployment and basic kernel/transfer/synchronization
+boundary, not a Kuyu canonical training kernel or Kuyu worker protocol.
 
 `KuyuMojoTrainingRuntime` bridges that backend-owned verification into
 `KuyuTrainingRuntime`'s generic executable-bundle contract. It derives the
