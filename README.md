@@ -22,11 +22,13 @@ session-owned device buffers, MAX runtime deployment, and native Jetson
 execution require their own capability and runtime acceptance before they
 become public runtime paths.
 
-The pinned swift-mojo revision now provides a separate schema-1 accelerator
-runtime receipt. A real MAX Metal object and its four-library AsyncRT/KGEN
-closure have passed receipt preparation and fresh re-inspection. This proves
-the dependency identity and fail-closed preflight layer; it does not yet create,
-link, or execute the isolated worker.
+The pinned swift-mojo revision provides schema-1 accelerator runtime receipts
+and isolated worker bundles. A real MAX Metal object and its four-library
+AsyncRT/KGEN closure were linked into exact bundle
+`38075467012f877bb5ea23daf3d4639aa175b478bfaca898706bd33e1ff72e77`,
+freshly verified, relocated, and executed with a minimal process environment.
+The worker created a real Apple M4 Max device context. This proves the macOS
+runtime deployment boundary, not a Metal compute kernel or Kuyu worker protocol.
 
 The numerical and failure gates are defined in `PARITY_CONTRACT.md`, with
 executed results in `RELIABILITY_EVIDENCE.md`. The

@@ -1,5 +1,5 @@
 {
-  "originHash" : "d0c4ad347a615d35c7b6b84e4d3ba6260e6a68872a99bf3af5b9608578059451",
+  "originHash" : "84ef8b94e6b351a7541891caa13e7d40332431c82c70e42eb97ae0281402dbe4",
   "pins" : [
     {
       "identity" : "swift-async-algorithms",
@@ -42,7 +42,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/1amageek/swift-mojo.git",
       "state" : {
-        "revision" : "9312e1ece5b6777fccef7be69a8cd9ec7fe674da"
+        "revision" : "438e2ab3aa23e2e140ba643b96910f918411d83f"
       }
     },
     {

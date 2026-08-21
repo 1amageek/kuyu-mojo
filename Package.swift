@@ -22,7 +22,7 @@ let package = Package(
         .package(path: "../kuyu-physics"),
         .package(
             url: "https://github.com/1amageek/swift-mojo.git",
-            revision: "9312e1ece5b6777fccef7be69a8cd9ec7fe674da"
+            revision: "438e2ab3aa23e2e140ba643b96910f918411d83f"
         ),
     ],
     targets: [

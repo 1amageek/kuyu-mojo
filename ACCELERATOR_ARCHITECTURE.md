@@ -15,6 +15,7 @@ distribution `26.5.0`, MAX `26.5.0`, and Mojo `1.0.0 (ed45d567)` on
 | A Float32 Metal kernel reaches final `metallib` compilation | The only remaining local failure is the absent optional Xcode Metal Toolchain | Toolchain installation and real kernel execution are separate acceptance gates |
 | A MAX-backed object references AsyncRT and KGEN | Object inspection reported `AsyncRT_DeviceContext_*` and `KGEN_CompilerRT_*` undefined symbols | Accelerator artifacts require an explicit dynamic runtime deployment contract |
 | The MAX dependency closure can be reproduced exactly | swift-mojo schema-1 receipt `050ceac20bc593aed6e36757c050e01a0f0ec7d002bcebb49f3675d77ba4e179` re-inspected the object and four AsyncRT/KGEN libraries | Worker packaging consumes the verified receipt rather than ambient runtime search paths |
+| The receipt can be linked and relocated without ambient runtime search | swift-mojo bundle `38075467012f877bb5ea23daf3d4639aa175b478bfaca898706bd33e1ff72e77` passed fresh tree, digest, Mach-O import, and `@executable_path/../lib` verification before minimal-environment execution created an Apple M4 Max context | macOS deployment identity is proven; Kuyu protocol, compute, cancellation, and native Jetson remain separate gates |
 | Jetson Orin is the official `sm_87` target | Mojo's supported-target query reports `sm_87 - Ampere embedded (Jetson Orin)` | Jetson builds fix host `aarch64-unknown-linux-gnu`, CPU `cortex-a78ae`, and accelerator `sm_87` |
 | Cross-compilation produces a real AArch64 ELF object | The Float32 CUDA probe emitted an 80 KiB ELF64 AArch64 relocatable object | Host architecture generation is proven, but native link and execution are not |
 | Cross-compiled `DeviceContext` code embeds PTX targeted at `sm_80` | Assembly inspection found PTX 8.1 with `.target sm_80` despite the CLI `sm_87` target | The PTX is compatible with Orin JIT, but native `sm_87` specialization must be inspected on Jetson before qualification |
@@ -68,11 +69,12 @@ CPU or another accelerator as a fallback.
 ## Runtime dependency contract
 
 The current swift-mojo static artifact verifier correctly rejects KGEN and
-other undeclared dynamic runtime symbols. Its separate schema-1 runtime receipt
-now binds object/library digests, target architecture, exact symbol providers,
-and the transitive Mach-O/ELF dependency closure. Accelerator support consumes
-that receipt rather than weakening the static check. The worker bundle still
-must declare:
+other undeclared dynamic runtime symbols. Its schema-1 runtime receipt binds
+object/library digests, target architecture, exact symbol providers, and the
+transitive Mach-O/ELF dependency closure. Its schema-1 bundle manifest binds the
+linked executable, copied closure, relative loader root, system boundary, and
+Linux interpreter. Accelerator support consumes both identities rather than
+weakening the static check. The Kuyu worker protocol must additionally declare:
 
 | Field | Required meaning |
 |---|---|
@@ -84,10 +86,10 @@ must declare:
 | Synchronization | Completion point for every host-visible transfer |
 | Shutdown | Device buffers, context, runtime, and process termination order |
 
-The receipt verifier is the first worker preflight stage and rejects a changed,
-missing, ambiguous, unreachable, wrong-architecture, or path-disguised runtime
-dependency. The future worker preflight additionally validates loader layout and
-device capability before accepting an attempt. Runtime libraries are packaged
+The receipt verifier rejects a changed, missing, ambiguous, unreachable,
+wrong-architecture, or path-disguised runtime dependency. Bundle verification
+then rejects changed files, extra entries, missing runtime imports, and ambient
+loader roots before Kuyu accepts an attempt. Runtime libraries are packaged
 beside the worker; they are not discovered through an uncontrolled system
 search path.
 
@@ -109,8 +111,8 @@ search path.
 |---|---|---|
 | Receipt | Real object and four-library MAX closure verified | Native ELF object/shared-library receipt pending |
 | Toolchain | Optional Xcode Metal Toolchain present | Native Modular/MAX and CUDA toolchain present |
-| Build | Worker links declared MAX dylibs | Native AArch64 worker links declared MAX shared libraries |
-| Device | Real Apple GPU context | Real Orin `sm_87` context |
+| Build | Exact bundle links all declared MAX dylibs | Native AArch64 worker links declared MAX shared libraries |
+| Device | Real Apple GPU context created in relocated worker | Real Orin `sm_87` context |
 | Numeric | Float32 kernel; Float64 request rejected | Float32 kernel; declared capability negotiation |
 | Behavior | CPU Float32 differential, failure, synchronization, shutdown | Same plus native Jetson link/run and PTX/SASS target inspection |
 | Performance | Batch throughput and transfer budget | Batch throughput, thermal stability, and sustained-power budget |
