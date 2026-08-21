@@ -133,6 +133,22 @@ struct MojoAcceleratorWorkerBundlePreflightTests {
     }
 
     @Test(.timeLimit(.minutes(1)))
+    func preservesCancellation() throws {
+        let preflight = FileSystemMojoAcceleratorWorkerBundlePreflight(
+            runtimeVerifier: StubRuntimeVerifier(.cancellation)
+        )
+
+        #expect {
+            _ = try preflight.validatedBundle(
+                at: URL(fileURLWithPath: "/tmp/runtime", isDirectory: true),
+                requiring: Self.requirement()
+            )
+        } throws: { error in
+            error is CancellationError
+        }
+    }
+
+    @Test(.timeLimit(.minutes(1)))
     func rejectsInvalidRequirementsAndNonFileRoots() throws {
         #expect(
             throws: MojoAcceleratorWorkerBundleRequirement.ValidationError
@@ -278,6 +294,7 @@ private struct StubRuntimeVerifier: MojoRuntimeBundleVerifying {
         case success(MojoRuntimeBundleVerification)
         case runtimeFailure(MojoRuntimeBundleVerificationError)
         case unexpectedFailure(String)
+        case cancellation
     }
 
     let outcome: Outcome
@@ -296,6 +313,8 @@ private struct StubRuntimeVerifier: MojoRuntimeBundleVerifying {
             throw error
         case .unexpectedFailure(let detail):
             throw StubRuntimeVerifierError(detail: detail)
+        case .cancellation:
+            throw CancellationError()
         }
     }
 }

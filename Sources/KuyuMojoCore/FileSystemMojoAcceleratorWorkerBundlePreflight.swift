@@ -29,6 +29,8 @@ public struct FileSystemMojoAcceleratorWorkerBundlePreflight:
         } catch let error as MojoRuntimeBundleVerificationError {
             throw MojoAcceleratorWorkerBundlePreflightError
                 .runtimeVerificationFailed(error)
+        } catch let error as CancellationError {
+            throw error
         } catch {
             throw MojoAcceleratorWorkerBundlePreflightError
                 .unexpectedRuntimeVerificationFailure(

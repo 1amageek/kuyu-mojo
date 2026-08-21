@@ -16,8 +16,10 @@
 | Linux ELF packaging cannot silently produce an empty archive | `swift-mojo` revision `4a2382cc6e06cd4f5fe9f888474e3fa235a1acc1` archive-member verification and its 167-test suite | Passed |
 | Accelerator runtime symbols cannot enter the link-closed CPU artifact | The pinned `swift-mojo` linkage policy rejects undeclared `AsyncRT_*`, `KGEN_CompilerRT_*`, and `MGP_RT_*` symbols before archiving | Passed |
 | Accelerator runtime identity is reproducible without ambient dependency search | A real MAX Metal object and `libAsyncRTMojoBindings.dylib`, `libAsyncRTRuntimeGlobals.dylib`, `libKGENCompilerRTShared.dylib`, and `libMSupportGlobals.dylib` produced receipt `050ceac20bc593aed6e36757c050e01a0f0ec7d002bcebb49f3675d77ba4e179` and exact bundle `38075467012f877bb5ea23daf3d4639aa175b478bfaca898706bd33e1ff72e77`; fresh verification rejected ambient dependencies, and relocated minimal-environment execution reported `Accelerator: Apple M4 Max` | Passed for macOS link, loader, and device-context creation; compute kernel and native Jetson pending |
-| Kuyu rejects a runtime bundle whose declared identity changes | Six focused preflight tests cover exact acceptance, schema/bundle/receipt/target mismatch, invalid requirements, runtime-verifier failure preservation, non-file roots, and unsafe executable paths | Passed as typed failures with no fallback |
+| Kuyu rejects a runtime bundle whose declared identity changes | Seven focused preflight tests cover exact acceptance, schema/bundle/receipt/target mismatch, invalid requirements, runtime-verifier failure and cancellation preservation, non-file roots, and unsafe executable paths | Passed as typed failures with no fallback |
 | Kuyu's public preflight accepts the real relocated runtime bundle | Direct `xctest` with `KUYU_MOJO_TEST_ACCELERATOR_BUNDLE=/tmp/kuyu-runtime-bundle-real-v1` re-inspected the managed tree and returned the verified worker path | Passed in `0.67` seconds; four runtime libraries observed |
+| The Mojo verifier composes with Kuyu's generic source/staged executable contract | `KuyuMojoTrainingRuntime` tests reject root, relative-path, and resolved-executable disagreement; the opt-in real-bundle test derives the source contract, relocates the bundle, and verifies the relocated root through the same adapter | 5/5 passed at `/tmp/kuyu-mojo-training-runtime-real-bundle-1.xcresult` |
+| The new training-runtime adapter preserves package regression | Bounded `xcodebuild test` for the full package after adding `KuyuMojoTrainingRuntime` | 22/22 passed at `/tmp/kuyu-mojo-training-runtime-full-1.xcresult` |
 | Workspace boundaries and source-risk policy hold | `validate-kuyu-boundaries.sh`, `validate-unconscious-boundaries.sh`, and `audit-dangerous-code.sh --verbose` | Passed; zero audit blockers |
 
 The bounded test command was:
@@ -26,9 +28,11 @@ The bounded test command was:
 KUYU_MOJO_STRICT_PERFORMANCE_BUDGETS=1 TOOLCHAINS=com.apple.dt.toolchain.XcodeDefault xcodebuild test -quiet -scheme kuyu-mojo-Package -destination platform=macOS,arch=arm64 -skipPackagePluginValidation -maximum-test-execution-time-allowance 60
 ```
 
-The current result bundle `/tmp/kuyu-mojo-preflight-full-1.xcresult` reported
-16 of 16 tests passed, including the six preflight contract tests and the
-strict CPU performance gate. The installed real compiler was Mojo `1.0.0
+The prior strict result bundle `/tmp/kuyu-mojo-preflight-full-1.xcresult`
+reported 16 of 16 tests passed, including the original preflight contract tests
+and the strict CPU performance gate. The current non-strict package result
+`/tmp/kuyu-mojo-training-runtime-full-1.xcresult` reported 22 of 22 tests
+passed. The installed real compiler was Mojo `1.0.0
 (ed45d567)`.
 The measured Float32 maximum absolute residuals were `4.60e-7` for force,
 `2.10e-6` for derivative, `5.25e-7` for observables, `6.38e-8` for the 20-step

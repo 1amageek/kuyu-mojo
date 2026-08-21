@@ -34,6 +34,14 @@ freshly verified, relocated, and executed with a minimal process environment.
 The worker created a real Apple M4 Max device context. This proves the macOS
 runtime deployment boundary, not a Metal compute kernel or Kuyu worker protocol.
 
+`KuyuMojoTrainingRuntime` bridges that backend-owned verification into
+`KuyuTrainingRuntime`'s generic executable-bundle contract. It derives the
+generic executable source only from a verified manifest and rechecks that the
+requested root, executable-relative path, and resolved executable URL agree on
+both source and staged roots. The target does not expose the device-context
+probe as a training worker; executable worker-protocol support remains a
+separate acceptance gate.
+
 The numerical and failure gates are defined in `PARITY_CONTRACT.md`, with
 executed results in `RELIABILITY_EVIDENCE.md`. The
 runtime identity binds the canonical program schema and digest to the executor
