@@ -22,6 +22,12 @@ session-owned device buffers, MAX runtime deployment, and native Jetson
 execution require their own capability and runtime acceptance before they
 become public runtime paths.
 
+The pinned swift-mojo revision now provides a separate schema-1 accelerator
+runtime receipt. A real MAX Metal object and its four-library AsyncRT/KGEN
+closure have passed receipt preparation and fresh re-inspection. This proves
+the dependency identity and fail-closed preflight layer; it does not yet create,
+link, or execute the isolated worker.
+
 The numerical and failure gates are defined in `PARITY_CONTRACT.md`, with
 executed results in `RELIABILITY_EVIDENCE.md`. The
 runtime identity binds the canonical program schema and digest to the executor
