@@ -11,9 +11,9 @@ struct ReferenceQuadrotorMojoInputs {
         disturbances: DisturbanceState?,
         environment: WorldEnvironment?,
         force: QuadrotorGeneralizedForce?
-    ) throws -> [CanonicalValueID: MojoFloat64Value] {
+    ) throws -> [CanonicalValueID: MojoCanonicalValue] {
         let bindings = program.content.layoutBindings
-        var values: [CanonicalValueID: MojoFloat64Value] = [:]
+        var values: [CanonicalValueID: MojoCanonicalValue] = [:]
 
         try bind(&values, layoutID: bindings.state, fieldID: "position", value: .vector3(state.position))
         try bind(&values, layoutID: bindings.state, fieldID: "velocity", value: .vector3(state.velocity))
@@ -204,9 +204,9 @@ struct ReferenceQuadrotorMojoInputs {
 
     static func requiredValues(
         for graph: MojoCompiledGraph,
-        available: [CanonicalValueID: MojoFloat64Value]
-    ) throws -> [CanonicalValueID: MojoFloat64Value] {
-        var required: [CanonicalValueID: MojoFloat64Value] = [:]
+        available: [CanonicalValueID: MojoCanonicalValue]
+    ) throws -> [CanonicalValueID: MojoCanonicalValue] {
+        var required: [CanonicalValueID: MojoCanonicalValue] = [:]
         for binding in graph.inputs {
             guard let value = available[binding.valueID] else {
                 throw MojoProgramExecutionError.missingInput(binding.valueID)
@@ -217,10 +217,10 @@ struct ReferenceQuadrotorMojoInputs {
     }
 
     private static func bind(
-        _ values: inout [CanonicalValueID: MojoFloat64Value],
+        _ values: inout [CanonicalValueID: MojoCanonicalValue],
         layoutID: String,
         fieldID: String,
-        value: MojoFloat64Value
+        value: MojoCanonicalValue
     ) throws {
         values[try CanonicalValueID("\(layoutID).\(fieldID)")] = value
     }

@@ -1,97 +1,128 @@
 import KuyuCore
+import KuyuMojoCore
 import KuyuPhysics
 @testable import KuyuMojoDynamics
 import simd
 import Testing
 
-@Suite("Mojo CPU Float64 differential dynamics")
+@Suite("Mojo CPU differential dynamics")
 struct MojoScalarDynamicsDifferentialTests {
     @Test(.timeLimit(.minutes(1)))
     func matchesForceDerivativeAndObservableReferenceTraces() throws {
         let fixture = try Fixture()
         let reference = ReferenceQuadrotorScalarDynamicsExecutor()
-        let mojo = try MojoScalarDynamicsExecutor(program: fixture.program)
-
-        let fullIdentity = try mojo.executionIdentity(
-            program: fixture.program,
-            fidelity: .full,
-            mixer: fixture.mixer
-        )
-        #expect(fullIdentity.fidelityID == "full")
-        #expect(fullIdentity.constraintProjection == .identity)
-        #expect(fullIdentity.controlSemantics == .realizedMotorThrust)
-        #expect(fullIdentity.mixerLayout == .plus)
-        #expect(fullIdentity.rotorSpinDirections == [1, -1, 1, -1])
-
-        for fidelity in [ReferenceQuadrotorFidelity.full, .singleProp] {
-            let expectedForce = try reference.generalizedForce(
+        for numericType in [MojoNumericType.float32, .float64] {
+            var forceResidual = ResidualEnvelope()
+            var derivativeResidual = ResidualEnvelope()
+            var observableResidual = ResidualEnvelope()
+            let mojo = try MojoScalarDynamicsExecutor(
                 program: fixture.program,
-                state: fixture.state,
-                parameters: fixture.parameters,
-                mixer: fixture.mixer,
-                motorThrusts: fixture.thrusts,
-                disturbances: fixture.disturbances,
-                environment: fixture.environment,
-                activeTerms: fidelity.active
-            )
-            let actualForce = try mojo.generalizedForce(
-                program: fixture.program,
-                state: fixture.state,
-                parameters: fixture.parameters,
-                mixer: fixture.mixer,
-                motorThrusts: fixture.thrusts,
-                disturbances: fixture.disturbances,
-                environment: fixture.environment,
-                activeTerms: fidelity.active
-            )
-            assertForceClose(
-                actualForce,
-                expectedForce,
-                tolerance: ReferenceQuadrotorMojoParityContract.generalizedForce
+                numericType: numericType
             )
 
-            let expectedDerivative = try reference.derivative(
+            let fullIdentity = try mojo.executionIdentity(
                 program: fixture.program,
-                state: fixture.state,
-                parameters: fixture.parameters,
-                force: expectedForce
+                fidelity: .full,
+                mixer: fixture.mixer
             )
-            let actualDerivative = try mojo.derivative(
-                program: fixture.program,
-                state: fixture.state,
-                parameters: fixture.parameters,
-                force: actualForce
-            )
-            assertDerivativeClose(
-                actualDerivative,
-                expectedDerivative,
-                tolerance: ReferenceQuadrotorMojoParityContract.derivative
+            #expect(fullIdentity.compiledProgram.numericType == numericType)
+            #expect(fullIdentity.fidelityID == "full")
+            #expect(fullIdentity.constraintProjection == .identity)
+            #expect(fullIdentity.controlSemantics == .realizedMotorThrust)
+            #expect(fullIdentity.mixerLayout == .plus)
+            #expect(fullIdentity.rotorSpinDirections == [1, -1, 1, -1])
+            let tolerances = ReferenceQuadrotorMojoParityContract.tolerances(
+                for: numericType
             )
 
-            let expectedObservables = try reference.observables(
-                program: fixture.program,
-                state: fixture.state,
-                parameters: fixture.parameters,
-                environment: fixture.environment,
-                force: expectedForce
-            )
-            let actualObservables = try mojo.observables(
-                program: fixture.program,
-                state: fixture.state,
-                parameters: fixture.parameters,
-                environment: fixture.environment,
-                force: actualForce
-            )
-            assertVectorClose(
-                actualObservables.angularVelocityBody,
-                expectedObservables.angularVelocityBody,
-                tolerance: ReferenceQuadrotorMojoParityContract.observables
-            )
-            assertVectorClose(
-                actualObservables.specificForceBody,
-                expectedObservables.specificForceBody,
-                tolerance: ReferenceQuadrotorMojoParityContract.observables
-            )
+            for fidelity in [ReferenceQuadrotorFidelity.full, .singleProp] {
+                let expectedForce = try reference.generalizedForce(
+                    program: fixture.program,
+                    state: fixture.state,
+                    parameters: fixture.parameters,
+                    mixer: fixture.mixer,
+                    motorThrusts: fixture.thrusts,
+                    disturbances: fixture.disturbances,
+                    environment: fixture.environment,
+                    activeTerms: fidelity.active
+                )
+                let actualForce = try mojo.generalizedForce(
+                    program: fixture.program,
+                    state: fixture.state,
+                    parameters: fixture.parameters,
+                    mixer: fixture.mixer,
+                    motorThrusts: fixture.thrusts,
+                    disturbances: fixture.disturbances,
+                    environment: fixture.environment,
+                    activeTerms: fidelity.active
+                )
+                assertForceClose(
+                    actualForce,
+                    expectedForce,
+                    tolerance: tolerances.generalizedForce
+                )
+                forceResidual.record(actualForce, reference: expectedForce)
+
+                let expectedDerivative = try reference.derivative(
+                    program: fixture.program,
+                    state: fixture.state,
+                    parameters: fixture.parameters,
+                    force: expectedForce
+                )
+                let actualDerivative = try mojo.derivative(
+                    program: fixture.program,
+                    state: fixture.state,
+                    parameters: fixture.parameters,
+                    force: actualForce
+                )
+                assertDerivativeClose(
+                    actualDerivative,
+                    expectedDerivative,
+                    tolerance: tolerances.derivative
+                )
+                derivativeResidual.record(
+                    actualDerivative,
+                    reference: expectedDerivative
+                )
+
+                let expectedObservables = try reference.observables(
+                    program: fixture.program,
+                    state: fixture.state,
+                    parameters: fixture.parameters,
+                    environment: fixture.environment,
+                    force: expectedForce
+                )
+                let actualObservables = try mojo.observables(
+                    program: fixture.program,
+                    state: fixture.state,
+                    parameters: fixture.parameters,
+                    environment: fixture.environment,
+                    force: actualForce
+                )
+                assertVectorClose(
+                    actualObservables.angularVelocityBody,
+                    expectedObservables.angularVelocityBody,
+                    tolerance: tolerances.observables
+                )
+                assertVectorClose(
+                    actualObservables.specificForceBody,
+                    expectedObservables.specificForceBody,
+                    tolerance: tolerances.observables
+                )
+                observableResidual.record(
+                    actualObservables.angularVelocityBody,
+                    reference: expectedObservables.angularVelocityBody
+                )
+                observableResidual.record(
+                    actualObservables.specificForceBody,
+                    reference: expectedObservables.specificForceBody
+                )
+            }
+            if numericType == .float32 {
+                print("Kuyu Mojo CPU Float32 force residual: \(forceResidual)")
+                print("Kuyu Mojo CPU Float32 derivative residual: \(derivativeResidual)")
+                print("Kuyu Mojo CPU Float32 observable residual: \(observableResidual)")
+            }
         }
     }
 
@@ -104,41 +135,57 @@ struct MojoScalarDynamicsDifferentialTests {
             environment: fixture.environment,
             program: fixture.program
         )
-        let mojoModel = ReferenceQuadrotorPhysicsModel(
-            parameters: fixture.parameters,
-            mixer: fixture.mixer,
-            environment: fixture.environment,
-            program: fixture.program,
-            executor: try MojoScalarDynamicsExecutor(program: fixture.program)
-        )
         let integrator = ReferenceQuadrotorCanonicalIntegrator()
-        for fidelity in [ReferenceQuadrotorFidelity.full, .singleProp] {
-            var expected = fixture.state
-            var actual = fixture.state
-
-            for _ in 0..<20 {
-                expected = try integrator.step(
-                    state: expected,
-                    model: referenceModel,
-                    motorThrusts: fixture.thrusts,
-                    disturbances: fixture.disturbances,
-                    fidelity: fidelity,
-                    delta: 0.0025
+        for numericType in [MojoNumericType.float32, .float64] {
+            var integratedStateResidual = ResidualEnvelope()
+            let mojoModel = ReferenceQuadrotorPhysicsModel(
+                parameters: fixture.parameters,
+                mixer: fixture.mixer,
+                environment: fixture.environment,
+                program: fixture.program,
+                executor: try MojoScalarDynamicsExecutor(
+                    program: fixture.program,
+                    numericType: numericType
                 )
-                actual = try integrator.step(
-                    state: actual,
-                    model: mojoModel,
-                    motorThrusts: fixture.thrusts,
-                    disturbances: fixture.disturbances,
-                    fidelity: fidelity,
-                    delta: 0.0025
+            )
+            let tolerances = ReferenceQuadrotorMojoParityContract.tolerances(
+                for: numericType
+            )
+            for fidelity in [ReferenceQuadrotorFidelity.full, .singleProp] {
+                var expected = fixture.state
+                var actual = fixture.state
+
+                for _ in 0..<20 {
+                    expected = try integrator.step(
+                        state: expected,
+                        model: referenceModel,
+                        motorThrusts: fixture.thrusts,
+                        disturbances: fixture.disturbances,
+                        fidelity: fidelity,
+                        delta: 0.0025
+                    )
+                    actual = try integrator.step(
+                        state: actual,
+                        model: mojoModel,
+                        motorThrusts: fixture.thrusts,
+                        disturbances: fixture.disturbances,
+                        fidelity: fidelity,
+                        delta: 0.0025
+                    )
+                }
+                assertStateClose(
+                    actual,
+                    expected,
+                    tolerance: tolerances.integratedState
+                )
+                integratedStateResidual.record(actual, reference: expected)
+            }
+            if numericType == .float32 {
+                print(
+                    "Kuyu Mojo CPU Float32 RK4 state residual: "
+                        + "\(integratedStateResidual)"
                 )
             }
-            assertStateClose(
-                actual,
-                expected,
-                tolerance: ReferenceQuadrotorMojoParityContract.integratedState
-            )
         }
     }
 
@@ -159,8 +206,6 @@ struct MojoScalarDynamicsDifferentialTests {
             usage: fixture.environment.usage
         )
         let reference = ReferenceQuadrotorScalarDynamicsExecutor()
-        let mojo = try MojoScalarDynamicsExecutor(program: fixture.program)
-
         let expected = try reference.generalizedForce(
             program: fixture.program,
             state: zeroState,
@@ -171,21 +216,34 @@ struct MojoScalarDynamicsDifferentialTests {
             environment: zeroEnvironment,
             activeTerms: ReferenceQuadrotorFidelity.full.active
         )
-        let actual = try mojo.generalizedForce(
-            program: fixture.program,
-            state: zeroState,
-            parameters: fixture.parameters,
-            mixer: fixture.mixer,
-            motorThrusts: fixture.thrusts,
-            disturbances: .zero,
-            environment: zeroEnvironment,
-            activeTerms: ReferenceQuadrotorFidelity.full.active
-        )
-        assertForceClose(
-            actual,
-            expected,
-            tolerance: ReferenceQuadrotorMojoParityContract.zeroBoundary
-        )
+        for numericType in [MojoNumericType.float32, .float64] {
+            var zeroResidual = ResidualEnvelope()
+            let mojo = try MojoScalarDynamicsExecutor(
+                program: fixture.program,
+                numericType: numericType
+            )
+            let actual = try mojo.generalizedForce(
+                program: fixture.program,
+                state: zeroState,
+                parameters: fixture.parameters,
+                mixer: fixture.mixer,
+                motorThrusts: fixture.thrusts,
+                disturbances: .zero,
+                environment: zeroEnvironment,
+                activeTerms: ReferenceQuadrotorFidelity.full.active
+            )
+            assertForceClose(
+                actual,
+                expected,
+                tolerance: ReferenceQuadrotorMojoParityContract.tolerances(
+                    for: numericType
+                ).zeroBoundary
+            )
+            zeroResidual.record(actual, reference: expected)
+            if numericType == .float32 {
+                print("Kuyu Mojo CPU Float32 zero residual: \(zeroResidual)")
+            }
+        }
     }
 
     @Test(.timeLimit(.minutes(1)))
@@ -247,7 +305,7 @@ struct MojoScalarDynamicsDifferentialTests {
             force: .zero
         )
         #expect(throws: MojoProgramExecutionError.backendFailure(status: 1)) {
-            _ = try MojoScalarGraphExecutor().execute(
+            _ = try MojoFloat64GraphExecutor().execute(
                 corrupt,
                 inputs: try ReferenceQuadrotorMojoInputs.requiredValues(
                     for: corrupt,
@@ -384,4 +442,69 @@ private func assertVector4Close(
     #expect(tolerance.accepts(candidate: lhs.y, reference: rhs.y))
     #expect(tolerance.accepts(candidate: lhs.z, reference: rhs.z))
     #expect(tolerance.accepts(candidate: lhs.w, reference: rhs.w))
+}
+
+private struct ResidualEnvelope: CustomStringConvertible {
+    private(set) var maximumAbsolute = 0.0
+    private(set) var maximumRelative = 0.0
+
+    var description: String {
+        "absolute=\(maximumAbsolute), relative=\(maximumRelative)"
+    }
+
+    mutating func record(_ candidate: Double, reference: Double) {
+        let absolute = abs(candidate - reference)
+        maximumAbsolute = max(maximumAbsolute, absolute)
+        if reference != 0 {
+            maximumRelative = max(maximumRelative, absolute / abs(reference))
+        }
+    }
+
+    mutating func record(
+        _ candidate: SIMD3<Double>,
+        reference: SIMD3<Double>
+    ) {
+        record(candidate.x, reference: reference.x)
+        record(candidate.y, reference: reference.y)
+        record(candidate.z, reference: reference.z)
+    }
+
+    mutating func record(
+        _ candidate: SIMD4<Double>,
+        reference: SIMD4<Double>
+    ) {
+        record(candidate.x, reference: reference.x)
+        record(candidate.y, reference: reference.y)
+        record(candidate.z, reference: reference.z)
+        record(candidate.w, reference: reference.w)
+    }
+
+    mutating func record(
+        _ candidate: QuadrotorGeneralizedForce,
+        reference: QuadrotorGeneralizedForce
+    ) {
+        record(candidate.bodyForce, reference: reference.bodyForce)
+        record(candidate.bodyTorque, reference: reference.bodyTorque)
+        record(candidate.worldForce, reference: reference.worldForce)
+    }
+
+    mutating func record(
+        _ candidate: ReferenceQuadrotorStateDerivative,
+        reference: ReferenceQuadrotorStateDerivative
+    ) {
+        record(candidate.position, reference: reference.position)
+        record(candidate.velocity, reference: reference.velocity)
+        record(candidate.orientation, reference: reference.orientation)
+        record(candidate.angularVelocity, reference: reference.angularVelocity)
+    }
+
+    mutating func record(
+        _ candidate: ReferenceQuadrotorState,
+        reference: ReferenceQuadrotorState
+    ) {
+        record(candidate.position, reference: reference.position)
+        record(candidate.velocity, reference: reference.velocity)
+        record(candidate.orientation.vector, reference: reference.orientation.vector)
+        record(candidate.angularVelocity, reference: reference.angularVelocity)
+    }
 }

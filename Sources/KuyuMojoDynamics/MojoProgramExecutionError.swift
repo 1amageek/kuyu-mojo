@@ -1,4 +1,5 @@
 import KuyuPhysics
+import KuyuMojoCore
 import Mojo
 
 public enum MojoProgramExecutionError: Error, Equatable {
@@ -14,6 +15,15 @@ public enum MojoProgramExecutionError: Error, Equatable {
         actual: CanonicalValueShape
     )
     case nonFiniteInput(CanonicalValueID)
+    case inputNotRepresentable(
+        valueID: CanonicalValueID,
+        numericType: MojoNumericType
+    )
+    case planNotRepresentable(graphID: String, numericType: MojoNumericType)
+    case numericTypeMismatch(
+        expected: MojoNumericType,
+        actual: MojoNumericType
+    )
     case backendFailure(status: Int32)
     case bridgeFailure(MojoInvocationError)
     case invalidBackendOutput(graphID: String, outputID: String)

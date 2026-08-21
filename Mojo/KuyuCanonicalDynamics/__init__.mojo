@@ -9,13 +9,13 @@ def _valid_range(offset: Int, count: Int, limit: Int) -> Bool:
     return count <= limit - offset
 
 
-def _cross_component(
-    lhs: Pointer[Float64, MutUntrackedOrigin],
+def _cross_component[dtype: DType](
+    lhs: Pointer[Scalar[dtype], MutUntrackedOrigin],
     lhs_offset: Int,
-    rhs: Pointer[Float64, MutUntrackedOrigin],
+    rhs: Pointer[Scalar[dtype], MutUntrackedOrigin],
     rhs_offset: Int,
     component: Int,
-) -> Float64:
+) -> Scalar[dtype]:
     if component == 0:
         return (
             lhs[unsafe_offset=lhs_offset + 1]
@@ -38,11 +38,12 @@ def _cross_component(
     )
 
 
-def execute_graph(
-    input: Pointer[Float64, ImmUntrackedOrigin],
+def _execute_graph[dtype: DType](
+    input: Pointer[Scalar[dtype], ImmUntrackedOrigin],
     input_count: UInt64,
-    output: Pointer[Float64, MutUntrackedOrigin],
+    output: Pointer[Scalar[dtype], MutUntrackedOrigin],
     output_count: UInt64,
+    expected_magic: Int,
 ) -> Int32:
     var encoded_count = Int(input_count)
     var workspace_count = Int(output_count)
@@ -58,7 +59,7 @@ def execute_graph(
     var instruction_start = Int(input[unsafe_offset=6])
     var runtime_start = Int(input[unsafe_offset=7])
 
-    if magic != 1263883861 or schema != 1:
+    if magic != expected_magic or schema != 1:
         return Int32(1)
     if instruction_count < 0 or runtime_input_count < 0:
         return Int32(1)
@@ -74,7 +75,7 @@ def execute_graph(
         return Int32(2)
 
     for index in range(workspace_count):
-        output[unsafe_offset=index] = Float64(0)
+        output[unsafe_offset=index] = Scalar[dtype](0)
     for index in range(runtime_input_count):
         var value = input[unsafe_offset=runtime_start + index]
         if not isfinite(value):
@@ -227,7 +228,7 @@ def execute_graph(
             ):
                 return Int32(3)
             for component in range(3):
-                output[unsafe_offset=result_offset + component] = _cross_component(
+                output[unsafe_offset=result_offset + component] = _cross_component[dtype](
                     output,
                     operand0_offset,
                     output,
@@ -250,7 +251,7 @@ def execute_graph(
                     return Int32(3)
                 if length == 0:
                     for component in range(3):
-                        output[unsafe_offset=result_offset + component] = Float64(0)
+                        output[unsafe_offset=result_offset + component] = Scalar[dtype](0)
                 else:
                     output[unsafe_offset=result_offset] = x / length
                     output[unsafe_offset=result_offset + 1] = y / length
@@ -270,9 +271,9 @@ def execute_graph(
             var vx = output[unsafe_offset=operand1_offset]
             var vy = output[unsafe_offset=operand1_offset + 1]
             var vz = output[unsafe_offset=operand1_offset + 2]
-            var tx = Float64(2) * (qy * vz - qz * vy)
-            var ty = Float64(2) * (qz * vx - qx * vz)
-            var tz = Float64(2) * (qx * vy - qy * vx)
+            var tx = Scalar[dtype](2) * (qy * vz - qz * vy)
+            var ty = Scalar[dtype](2) * (qz * vx - qx * vz)
+            var tz = Scalar[dtype](2) * (qx * vy - qy * vx)
             if opcode == 13:
                 output[unsafe_offset=result_offset] = vx + qw * tx + (qy * tz - qz * ty)
                 output[unsafe_offset=result_offset + 1] = vy + qw * ty + (qz * tx - qx * tz)
@@ -296,16 +297,16 @@ def execute_graph(
             var wx = output[unsafe_offset=operand1_offset]
             var wy = output[unsafe_offset=operand1_offset + 1]
             var wz = output[unsafe_offset=operand1_offset + 2]
-            output[unsafe_offset=result_offset] = Float64(0.5) * (
+            output[unsafe_offset=result_offset] = Scalar[dtype](0.5) * (
                 qw * wx + qy * wz - qz * wy
             )
-            output[unsafe_offset=result_offset + 1] = Float64(0.5) * (
+            output[unsafe_offset=result_offset + 1] = Scalar[dtype](0.5) * (
                 qw * wy + qz * wx - qx * wz
             )
-            output[unsafe_offset=result_offset + 2] = Float64(0.5) * (
+            output[unsafe_offset=result_offset + 2] = Scalar[dtype](0.5) * (
                 qw * wz + qx * wy - qy * wx
             )
-            output[unsafe_offset=result_offset + 3] = Float64(-0.5) * (
+            output[unsafe_offset=result_offset + 3] = Scalar[dtype](-0.5) * (
                 qx * wx + qy * wy + qz * wz
             )
         else:
@@ -316,3 +317,33 @@ def execute_graph(
                 return Int32(5)
 
     return Int32(0)
+
+
+def execute_graph(
+    input: Pointer[Float64, ImmUntrackedOrigin],
+    input_count: UInt64,
+    output: Pointer[Float64, MutUntrackedOrigin],
+    output_count: UInt64,
+) -> Int32:
+    return _execute_graph[DType.float64](
+        input,
+        input_count,
+        output,
+        output_count,
+        1263883861,
+    )
+
+
+def execute_graph_float32(
+    input: Pointer[Float32, ImmUntrackedOrigin],
+    input_count: UInt64,
+    output: Pointer[Float32, MutUntrackedOrigin],
+    output_count: UInt64,
+) -> Int32:
+    return _execute_graph[DType.float32](
+        input,
+        input_count,
+        output,
+        output_count,
+        4937049,
+    )

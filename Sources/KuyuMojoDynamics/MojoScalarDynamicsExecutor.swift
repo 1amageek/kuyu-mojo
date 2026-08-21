@@ -1,4 +1,5 @@
 import KuyuCore
+import KuyuMojoCore
 import KuyuPhysics
 
 public struct MojoScalarDynamicsExecutor: ReferenceQuadrotorCanonicalExecuting, Sendable {
@@ -7,14 +8,40 @@ public struct MojoScalarDynamicsExecutor: ReferenceQuadrotorCanonicalExecuting, 
     }
 
     public let compiledProgram: MojoCompiledDynamicsProgram
-    private let graphExecutor: any MojoFloat64GraphExecuting
+    private let graphExecutor: any MojoGraphExecuting
 
     public init(
         program: CanonicalDynamicsProgram,
-        compiler: any MojoDynamicsProgramCompiling = KuyuMojoProgramCompiler(),
-        graphExecutor: any MojoFloat64GraphExecuting = MojoScalarGraphExecutor()
+        numericType: MojoNumericType = .float64
     ) throws {
-        self.compiledProgram = try compiler.compile(program)
+        let graphExecutor: any MojoGraphExecuting
+        switch numericType {
+        case .float32:
+            graphExecutor = MojoFloat32GraphExecutor()
+        case .float64:
+            graphExecutor = MojoFloat64GraphExecutor()
+        }
+        try self.init(
+            program: program,
+            compiler: KuyuMojoProgramCompiler(numericType: numericType),
+            graphExecutor: graphExecutor
+        )
+    }
+
+    public init(
+        program: CanonicalDynamicsProgram,
+        compiler: any MojoDynamicsProgramCompiling,
+        graphExecutor: any MojoGraphExecuting
+    ) throws {
+        let compiledProgram = try compiler.compile(program)
+        guard compiledProgram.identity.numericType
+                == graphExecutor.numericType else {
+            throw MojoProgramExecutionError.numericTypeMismatch(
+                expected: compiledProgram.identity.numericType,
+                actual: graphExecutor.numericType
+            )
+        }
+        self.compiledProgram = compiledProgram
         self.graphExecutor = graphExecutor
     }
 
@@ -272,7 +299,7 @@ public struct MojoScalarDynamicsExecutor: ReferenceQuadrotorCanonicalExecuting, 
     private func vector3Output(
         _ outputID: String,
         graph: MojoCompiledGraph,
-        outputs: [String: MojoFloat64Value]
+        outputs: [String: MojoCanonicalValue]
     ) throws -> SIMD3<Double> {
         guard case let .vector3(value) = outputs[outputID] else {
             throw MojoProgramExecutionError.invalidBackendOutput(
@@ -286,7 +313,7 @@ public struct MojoScalarDynamicsExecutor: ReferenceQuadrotorCanonicalExecuting, 
     private func vector4Output(
         _ outputID: String,
         graph: MojoCompiledGraph,
-        outputs: [String: MojoFloat64Value]
+        outputs: [String: MojoCanonicalValue]
     ) throws -> SIMD4<Double> {
         guard case let .vector4(value) = outputs[outputID] else {
             throw MojoProgramExecutionError.invalidBackendOutput(

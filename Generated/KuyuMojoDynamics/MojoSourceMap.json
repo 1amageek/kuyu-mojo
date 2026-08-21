@@ -10,8 +10,26 @@
       }
     },
     {
+      "bindingID" : 2322419702346763180,
+      "generatedLine" : 3,
+      "source" : {
+        "column" : 1,
+        "file" : "Sources\/KuyuMojoDynamics\/MojoFloat32CanonicalGraphBinding.swift",
+        "line" : 3
+      }
+    },
+    {
+      "bindingID" : 2322419702346763180,
+      "generatedLine" : 35,
+      "source" : {
+        "column" : 1,
+        "file" : "Sources\/KuyuMojoDynamics\/MojoFloat32CanonicalGraphBinding.swift",
+        "line" : 3
+      }
+    },
+    {
       "bindingID" : 1653368010419799125,
-      "generatedLine" : 32,
+      "generatedLine" : 49,
       "source" : {
         "column" : 1,
         "file" : "Sources\/KuyuMojoDynamics\/MojoCanonicalGraphBinding.swift",
@@ -20,6 +38,6 @@
     }
   ],
   "generatedFile" : "Bindings.mojo",
-  "inputGraphDigest" : "17ccc1dafcd1a39fe839f86cd62aad3c592f740eac953e1dc288834373f29d4d",
+  "inputGraphDigest" : "cb12499884905d9cc48bb634b7f20339e7d502e978fa6a7d1bc78e35607eded8",
   "schemaVersion" : 1
 }

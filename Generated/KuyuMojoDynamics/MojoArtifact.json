@@ -1,6 +1,6 @@
 {
   "abiVersion" : 1,
-  "artifactDigest" : "f947ad6dfe03d4e2c73032836b394db8b15325eb1f3aa6db09fb86e3e3879088",
+  "artifactDigest" : "de591f231511623a0269f4e797b620eacf1a05e9ef9eaf8eddc51c7f3bcbdba2",
   "artifactIdentity" : {
     "artifactName" : "SwiftMojo_KuyuMojoDynamics_ABI.xcframework",
     "libraryName" : "libSwiftMojo_KuyuMojoDynamics_ABI.a",
@@ -11,12 +11,12 @@
   "artifacts" : [
     {
       "adapter" : "appleXCFramework",
-      "digest" : "a28ceaf3a30592158b7f043ea31a99865dddd4d1b23500fe4762ed1be79796bd",
+      "digest" : "2423b841c82f6d510eeaea4fbe75cf6858c68df097aab936d4cf6171f567087d",
       "name" : "SwiftMojo_KuyuMojoDynamics_ABI.xcframework"
     },
     {
       "adapter" : "linuxStaticLibraryBundle",
-      "digest" : "19f39e354072328b68eccc54ac00debc4c4ac738e7cd8bf32e9f1f1a541d1b02",
+      "digest" : "180b36a66faf3ad3612f01d39d3269fa4534d262ed0c6144ca2610cafbeb1ec7",
       "name" : "SwiftMojo_KuyuMojoDynamics_ABI.artifactbundle"
     }
   ],
@@ -26,23 +26,29 @@
       "bindingID" : 1653368010419799125,
       "functionName" : "executeCanonicalGraph",
       "implementationDigest" : "95dcf8a149dfc2d0eab3a0c473cb644832310ea9f5cec14abaae5301faa18b17"
+    },
+    {
+      "abiDigest" : "a03ae46a21bf4bac2658734b309634cb1777f5a22c2b869b09eb1e62f26cb4d5",
+      "bindingID" : 2322419702346763180,
+      "functionName" : "executeCanonicalGraphFloat32",
+      "implementationDigest" : "6912a15541aede995ec170a1432a61aff334058cf2f05f11ddd2bd73696c90d5"
     }
   ],
   "compilerVersion" : "Mojo 1.0.0 (ed45d567)",
   "externalPackages" : [
     {
-      "digest" : "b482e11b79f583ae63435dc26f2a812af5a37a62b43233343378fe05ce1ae66f",
+      "digest" : "0db29f916bc5b974fd43df50a3c33cfb90abc336401d9dff51d7ab432cc8f210",
       "name" : "KuyuCanonicalDynamics"
     }
   ],
-  "generatedSourceDigest" : "91b2abae9fb1ec7811bd2236dec38fc567f4818a348813b36a47ed5a08c75456",
-  "generationPipelineDigest" : "0d6953e8ae29b9dd6d266b8c6f27781b2031f8a3c81711005cfc2ea52a258ad5",
-  "inputGraphDigest" : "17ccc1dafcd1a39fe839f86cd62aad3c592f740eac953e1dc288834373f29d4d",
-  "inputGraphIdentifier" : 1714958704409944991,
+  "generatedSourceDigest" : "04a7fd5efd8f338b340a05e4e14f24262d694b13dc9c93ad6c3e7dc7df0e4d36",
+  "generationPipelineDigest" : "b14f0ae8b9fd9181c3d40c91d51394e5bc6e5bd505ddc5a949eac66555d4f2fa",
+  "inputGraphDigest" : "cb12499884905d9cc48bb634b7f20339e7d502e978fa6a7d1bc78e35607eded8",
+  "inputGraphIdentifier" : 5409467021833297308,
   "schemaVersion" : 5,
   "slices" : [
     {
-      "archiveDigest" : "c75748ded8452c9409d1cdc4375fa2fb0c275fc2b3793b61ac1fc1e7ab9b253d",
+      "archiveDigest" : "85651efd647c619813cc5359bed719e841bb8871ed6a2731b06965998bedf1d4",
       "libraryIdentifier" : "linux-234e17a28cd31bbdd7861545e26b882a5e96f4b155fa3922926bac590e206378",
       "target" : {
         "cpu" : "generic",
@@ -50,7 +56,7 @@
       }
     },
     {
-      "archiveDigest" : "985be108de262c8e67ab416b9b304c0c2ca592c7b4be26d7a4f139bd7c91828e",
+      "archiveDigest" : "4a771dca787feba7aa88f937ac460050e0e37dc0cc76e107b76a1e12bcc48dd5",
       "libraryIdentifier" : "macos-arm64",
       "target" : {
         "cpu" : "generic",
@@ -58,7 +64,7 @@
       }
     }
   ],
-  "sourceGraphDigest" : "65d6579c1b6b1adae8b3d3002748d2dded0308b0b670a2bb7b968c20369784df",
-  "sourceGraphIdentifier" : 7338148970833320666,
-  "sourceMapDigest" : "b8b265d681f10238ba2e3290794f750dea170f94c77ab8764fb8209c44fe8f13"
+  "sourceGraphDigest" : "2551736f04d7906366f002fe4447159d7a439e5687053b252962a5c0d8d1ff5a",
+  "sourceGraphIdentifier" : 2689057373176696931,
+  "sourceMapDigest" : "7c586f20968f6d4f04e03178dd0bd76f7e6a4e656c078b6ce9340307a04e6e88"
 }

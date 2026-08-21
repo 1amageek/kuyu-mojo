@@ -1,13 +1,23 @@
+import KuyuMojoCore
 import KuyuPhysics
-import Mojo
 
-public struct MojoScalarGraphExecutor: MojoFloat64GraphExecuting, Sendable {
-    public init() {}
-
-    public func execute(
+enum MojoGraphExecutionSupport {
+    static func validate(
         _ graph: MojoCompiledGraph,
-        inputs: [CanonicalValueID: MojoFloat64Value]
-    ) throws -> [String: MojoFloat64Value] {
+        executorNumericType: MojoNumericType
+    ) throws {
+        guard graph.identity.numericType == executorNumericType else {
+            throw MojoProgramExecutionError.numericTypeMismatch(
+                expected: graph.identity.numericType,
+                actual: executorNumericType
+            )
+        }
+    }
+
+    static func inputs(
+        for graph: MojoCompiledGraph,
+        from inputs: [CanonicalValueID: MojoCanonicalValue]
+    ) throws -> [(MojoValueBinding, MojoCanonicalValue)] {
         let requiredInputIDs = Set(graph.inputs.map(\.valueID))
         if let unexpected = inputs.keys
             .filter({ !requiredInputIDs.contains($0) })
@@ -16,11 +26,8 @@ public struct MojoScalarGraphExecutor: MojoFloat64GraphExecuting, Sendable {
             throw MojoProgramExecutionError.unexpectedInput(unexpected)
         }
 
-        var payload = graph.encodedPlan
-        payload.reserveCapacity(
-            graph.encodedPlan.count
-                + graph.inputs.reduce(0) { $0 + $1.shape.elementCount }
-        )
+        var ordered: [(MojoValueBinding, MojoCanonicalValue)] = []
+        ordered.reserveCapacity(graph.inputs.count)
         for binding in graph.inputs {
             guard let value = inputs[binding.valueID] else {
                 throw MojoProgramExecutionError.missingInput(binding.valueID)
@@ -35,29 +42,24 @@ public struct MojoScalarGraphExecutor: MojoFloat64GraphExecuting, Sendable {
             guard value.isFinite else {
                 throw MojoProgramExecutionError.nonFiniteInput(binding.valueID)
             }
-            value.append(to: &payload)
+            ordered.append((binding, value))
         }
+        return ordered
+    }
 
-        var workspace = [Double](
-            repeating: 0,
-            count: graph.workspaceElementCount
-        )
-        do {
-            try executeCanonicalGraph(payload, into: &workspace)
-        } catch MojoInvocationError.invocationFailed(_, let status) {
-            throw MojoProgramExecutionError.backendFailure(status: status)
-        } catch let error as MojoInvocationError {
-            throw MojoProgramExecutionError.bridgeFailure(error)
-        }
-
-        var result: [String: MojoFloat64Value] = [:]
+    static func outputs<Element: BinaryFloatingPoint>(
+        for graph: MojoCompiledGraph,
+        workspace: [Element]
+    ) throws -> [String: MojoCanonicalValue] {
+        var result: [String: MojoCanonicalValue] = [:]
+        result.reserveCapacity(graph.outputs.count)
         for output in graph.outputs {
             let (endOffset, overflowed) = output.offset.addingReportingOverflow(
                 output.shape.elementCount
             )
             guard !overflowed, output.offset >= 0,
                   endOffset <= workspace.count,
-                  let value = MojoFloat64Value.value(
+                  let value = MojoCanonicalValue.value(
                       shape: output.shape,
                       elements: workspace[output.offset..<endOffset]
                   ) else {

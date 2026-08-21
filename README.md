@@ -7,19 +7,26 @@ second set of equations.
 ```text
 CanonicalDynamicsProgram
     -> KuyuMojoProgramCompiler
-        -> immutable Float64 SSA plan
+        -> immutable numeric-specific SSA plan
             -> MojoScalarDynamicsExecutor
+                -> Mojo Float64 / Float32 CPU execution
 ```
 
-The current runtime-verified slice is deterministic macOS CPU Float64
-execution. The same generated C ABI is cross-packaged as a Linux ARM64 static
-library artifact for native acceptance on Jetson; cross-compilation is not
-native execution evidence. Metal, CUDA, session-owned device buffers, and
-native Jetson execution require their own capability and runtime acceptance
-before they become public runtime paths.
+The current runtime-verified slices are deterministic macOS CPU Float64 and
+Float32 execution. Float64 remains the semantic verifier. Float32 establishes
+the explicit precision boundary required by Apple Metal and NVIDIA CUDA; it is
+not evidence of accelerator execution. Both generated C ABIs are
+cross-packaged in one Linux ARM64 static library artifact for native acceptance
+on Jetson. Cross-compilation is not native execution evidence. Metal, CUDA,
+session-owned device buffers, MAX runtime deployment, and native Jetson
+execution require their own capability and runtime acceptance before they
+become public runtime paths.
 
 The numerical and failure gates are defined in `PARITY_CONTRACT.md`, with
 executed results in `RELIABILITY_EVIDENCE.md`. The
 runtime identity binds the canonical program schema and digest to the executor
-version, Float64 CPU device class, fidelity/projection declaration, control
-semantics, and mixer/spin convention.
+version, numeric type, CPU device class, fidelity/projection declaration,
+control semantics, and mixer/spin convention.
+
+The final Metal/CUDA worker, MAX runtime deployment, ownership, and native
+acceptance contracts are defined in `ACCELERATOR_ARCHITECTURE.md`.

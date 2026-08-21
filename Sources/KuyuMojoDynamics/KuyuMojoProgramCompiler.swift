@@ -2,20 +2,25 @@ import KuyuPhysics
 import KuyuMojoCore
 
 public struct KuyuMojoProgramCompiler: MojoDynamicsProgramCompiling, Sendable {
-    public static let executorVersion = "mojo-cpu-float64-ssa-v1"
+    public static let float32ExecutorVersion = "mojo-cpu-float32-ssa-v1"
+    public static let float64ExecutorVersion = "mojo-cpu-float64-ssa-v2"
 
-    static let planMagic = 1_263_883_861
+    static let float32PlanMagic = 4_937_049
+    static let float64PlanMagic = 1_263_883_861
     static let planSchemaVersion = 1
     static let headerElementCount = 8
     static let instructionElementCount = 16
     static let maximumOperandCount = 3
     static let maximumConstantCount = 4
 
+    public let numericType: MojoNumericType
     private let graphValidator: any CanonicalOperationGraphValidating
 
     public init(
+        numericType: MojoNumericType = .float64,
         graphValidator: any CanonicalOperationGraphValidating = CanonicalOperationGraphValidator()
     ) {
+        self.numericType = numericType
         self.graphValidator = graphValidator
     }
 
@@ -25,8 +30,8 @@ public struct KuyuMojoProgramCompiler: MojoDynamicsProgramCompiling, Sendable {
         let identity = try MojoCompiledProgramIdentity(
             programSchemaVersion: program.content.schemaVersion,
             programDigest: program.digest.rawValue,
-            executorVersion: Self.executorVersion,
-            numericType: .float64,
+            executorVersion: executorVersion,
+            numericType: numericType,
             deviceClass: .cpu
         )
         var forceTerms: [CanonicalForceTermID: MojoCompiledGraph] = [:]
@@ -138,6 +143,14 @@ public struct KuyuMojoProgramCompiler: MojoDynamicsProgramCompiling, Sendable {
             record[10] = Double(instruction.componentIndex ?? -1)
             record[11] = Double(instruction.constants.count)
             for (index, constant) in instruction.constants.enumerated() {
+                guard isRepresentable(constant) else {
+                    throw MojoProgramCompilationError.constantNotRepresentable(
+                        graphID: graph.id,
+                        valueID: instruction.result,
+                        constantIndex: index,
+                        numericType: numericType
+                    )
+                }
                 record[12 + index] = constant
             }
             records.append(contentsOf: record)
@@ -149,7 +162,7 @@ public struct KuyuMojoProgramCompiler: MojoDynamicsProgramCompiling, Sendable {
                 instructionStorageCount
             )
         guard !runtimeStartOverflow,
-              runtimeStart <= 9_007_199_254_740_991 else {
+              runtimeStart <= maximumExactInteger else {
             throw MojoProgramCompilationError.valueTableOverflow(
                 graphID: graph.id
             )
@@ -169,7 +182,7 @@ public struct KuyuMojoProgramCompiler: MojoDynamicsProgramCompiling, Sendable {
             )
         }
         var encodedPlan = [
-            Double(Self.planMagic),
+            Double(planMagic),
             Double(Self.planSchemaVersion),
             Double(graph.instructions.count),
             Double(nextOffset),
@@ -215,7 +228,7 @@ public struct KuyuMojoProgramCompiler: MojoDynamicsProgramCompiling, Sendable {
         let (endOffset, overflowed) = nextOffset.addingReportingOverflow(
             shape.elementCount
         )
-        guard !overflowed, endOffset <= 9_007_199_254_740_991 else {
+        guard !overflowed, endOffset <= maximumExactInteger else {
             throw MojoProgramCompilationError.valueTableOverflow(
                 graphID: graphID
             )
@@ -226,5 +239,44 @@ public struct KuyuMojoProgramCompiler: MojoDynamicsProgramCompiling, Sendable {
             offset: offset,
             shape: shape
         )
+    }
+
+    private var executorVersion: String {
+        switch numericType {
+        case .float32:
+            Self.float32ExecutorVersion
+        case .float64:
+            Self.float64ExecutorVersion
+        }
+    }
+
+    private var planMagic: Int {
+        switch numericType {
+        case .float32:
+            Self.float32PlanMagic
+        case .float64:
+            Self.float64PlanMagic
+        }
+    }
+
+    private var maximumExactInteger: Int {
+        switch numericType {
+        case .float32:
+            16_777_216
+        case .float64:
+            9_007_199_254_740_991
+        }
+    }
+
+    private func isRepresentable(_ value: Double) -> Bool {
+        guard value.isFinite else {
+            return false
+        }
+        switch numericType {
+        case .float32:
+            return Float(value).isFinite
+        case .float64:
+            return true
+        }
     }
 }

@@ -64,6 +64,7 @@ let package = Package(
             name: "KuyuMojoDynamicsTests",
             dependencies: [
                 "KuyuMojoDynamics",
+                "KuyuMojoCore",
                 .product(name: "KuyuCore", package: "kuyu-core"),
                 .product(name: "KuyuPhysics", package: "kuyu-physics"),
             ]
