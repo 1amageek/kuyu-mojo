@@ -16,6 +16,7 @@ distribution `26.5.0`, MAX `26.5.0`, and Mojo `1.0.0 (ed45d567)` on
 | A MAX-backed object references AsyncRT and KGEN | Object inspection reported `AsyncRT_DeviceContext_*` and `KGEN_CompilerRT_*` undefined symbols | Accelerator artifacts require an explicit dynamic runtime deployment contract |
 | The MAX dependency closure can be reproduced exactly | swift-mojo schema-1 receipt `050ceac20bc593aed6e36757c050e01a0f0ec7d002bcebb49f3675d77ba4e179` re-inspected the object and four AsyncRT/KGEN libraries | Worker packaging consumes the verified receipt rather than ambient runtime search paths |
 | The receipt can be linked and relocated without ambient runtime search | swift-mojo bundle `38075467012f877bb5ea23daf3d4639aa175b478bfaca898706bd33e1ff72e77` passed fresh tree, digest, Mach-O import, and `@executable_path/../lib` verification before minimal-environment execution created an Apple M4 Max context | macOS deployment identity is proven; Kuyu protocol, compute, cancellation, and native Jetson remain separate gates |
+| Kuyu can independently admit the bundle through a public read-only API | `MojoAcceleratorWorkerBundlePreflighting` re-verified the real bundle and matched schema, bundle digest, receipt digest, and target before returning `bin/kuyu-mojo-worker` | Source and staged snapshots can use the same fail-closed Kuyu preflight without importing swift-mojo internals |
 | Jetson Orin is the official `sm_87` target | Mojo's supported-target query reports `sm_87 - Ampere embedded (Jetson Orin)` | Jetson builds fix host `aarch64-unknown-linux-gnu`, CPU `cortex-a78ae`, and accelerator `sm_87` |
 | Cross-compilation produces a real AArch64 ELF object | The Float32 CUDA probe emitted an 80 KiB ELF64 AArch64 relocatable object | Host architecture generation is proven, but native link and execution are not |
 | Cross-compiled `DeviceContext` code embeds PTX targeted at `sm_80` | Assembly inspection found PTX 8.1 with `.target sm_80` despite the CLI `sm_87` target | The PTX is compatible with Orin JIT, but native `sm_87` specialization must be inspected on Jetson before qualification |
@@ -27,14 +28,18 @@ not provide the required host runtime.
 
 ## Final execution boundary
 
-The application does not load MAX into the UI or command adapter process. An
-attempt-owned worker links the generated swift-mojo ABI and the declared MAX
-runtime libraries, creates exactly one device context, and owns every device
-buffer until shutdown.
+The application does not load MAX into the UI or command adapter process. Kuyu
+first validates the source bundle, the training runtime stages an immutable
+attempt-owned copy, and Kuyu validates that staged copy again immediately
+before launch. An attempt-owned worker links the generated swift-mojo ABI and
+the declared MAX runtime libraries, creates exactly one device context, and
+owns every device buffer until shutdown.
 
 ```mermaid
 flowchart LR
-  App["Kuyu runtime facade"] --> Protocol["Authenticated typed worker protocol"]
+  Bundle["Digest-pinned runtime bundle"] --> Preflight["Kuyu read-only preflight"]
+  Preflight --> App["Kuyu runtime facade"]
+  App --> Protocol["Authenticated typed worker protocol"]
   Protocol --> Worker["Attempt-owned Swift worker"]
   Worker --> Bridge["swift-mojo generated ABI"]
   Bridge --> MAX["MAX AsyncRT + KGEN"]
@@ -89,9 +94,11 @@ weakening the static check. The Kuyu worker protocol must additionally declare:
 The receipt verifier rejects a changed, missing, ambiguous, unreachable,
 wrong-architecture, or path-disguised runtime dependency. Bundle verification
 then rejects changed files, extra entries, missing runtime imports, and ambient
-loader roots before Kuyu accepts an attempt. Runtime libraries are packaged
-beside the worker; they are not discovered through an uncontrolled system
-search path.
+loader roots before Kuyu accepts an attempt. Kuyu additionally requires an
+exact schema, bundle digest, receipt digest, and target match, and rejects an
+unsafe executable-relative path even when a verifier implementation is
+injected. Runtime libraries are packaged beside the worker; they are not
+discovered through an uncontrolled system search path.
 
 ## Resource ownership
 

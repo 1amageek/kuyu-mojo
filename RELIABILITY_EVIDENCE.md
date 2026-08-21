@@ -13,9 +13,11 @@
 | CPU execution meets the current control-loop floor | Strict `KUYU_MOJO_STRICT_PERFORMANCE_BUDGETS=1` test with 200 timed full RK4 steps per numeric type | Float32 `795.27` steps/s and Float64 `1410.88` steps/s; both passed the 400 steps/s floor |
 | The checked-in ABI artifacts match the source graph | `swift package mojo inspect --target KuyuMojoDynamics` | Two bindings; input graph `cb12499884905d9cc48bb634b7f20339e7d502e978fa6a7d1bc78e35607eded8`; aggregate artifact `379d4e137fa359d8c1404ed7e07be4adbb0cc44a58ca3fad3f32c85617859e78` |
 | The Linux ARM64 archive contains both compiled Mojo ABIs | `llvm-ar t`, `llvm-nm --undefined-only`, and extraction followed by `file` | Archive `85651efd647c619813cc5359bed719e841bb8871ed6a2731b06965998bedf1d4`; member `Bindings.o`; ELF64 aarch64; Float32 and Float64 call symbols; only unresolved symbol is libc `memset` |
-| Linux ELF packaging cannot silently produce an empty archive | `swift-mojo` revision `438e2ab3aa23e2e140ba643b96910f918411d83f` archive-member verification and its 164-test suite | Passed |
+| Linux ELF packaging cannot silently produce an empty archive | `swift-mojo` revision `4a2382cc6e06cd4f5fe9f888474e3fa235a1acc1` archive-member verification and its 167-test suite | Passed |
 | Accelerator runtime symbols cannot enter the link-closed CPU artifact | The pinned `swift-mojo` linkage policy rejects undeclared `AsyncRT_*`, `KGEN_CompilerRT_*`, and `MGP_RT_*` symbols before archiving | Passed |
 | Accelerator runtime identity is reproducible without ambient dependency search | A real MAX Metal object and `libAsyncRTMojoBindings.dylib`, `libAsyncRTRuntimeGlobals.dylib`, `libKGENCompilerRTShared.dylib`, and `libMSupportGlobals.dylib` produced receipt `050ceac20bc593aed6e36757c050e01a0f0ec7d002bcebb49f3675d77ba4e179` and exact bundle `38075467012f877bb5ea23daf3d4639aa175b478bfaca898706bd33e1ff72e77`; fresh verification rejected ambient dependencies, and relocated minimal-environment execution reported `Accelerator: Apple M4 Max` | Passed for macOS link, loader, and device-context creation; compute kernel and native Jetson pending |
+| Kuyu rejects a runtime bundle whose declared identity changes | Six focused preflight tests cover exact acceptance, schema/bundle/receipt/target mismatch, invalid requirements, runtime-verifier failure preservation, non-file roots, and unsafe executable paths | Passed as typed failures with no fallback |
+| Kuyu's public preflight accepts the real relocated runtime bundle | Direct `xctest` with `KUYU_MOJO_TEST_ACCELERATOR_BUNDLE=/tmp/kuyu-runtime-bundle-real-v1` re-inspected the managed tree and returned the verified worker path | Passed in `0.67` seconds; four runtime libraries observed |
 | Workspace boundaries and source-risk policy hold | `validate-kuyu-boundaries.sh`, `validate-unconscious-boundaries.sh`, and `audit-dangerous-code.sh --verbose` | Passed; zero audit blockers |
 
 The bounded test command was:
@@ -24,8 +26,10 @@ The bounded test command was:
 KUYU_MOJO_STRICT_PERFORMANCE_BUDGETS=1 TOOLCHAINS=com.apple.dt.toolchain.XcodeDefault xcodebuild test -quiet -scheme kuyu-mojo-Package -destination platform=macOS,arch=arm64 -skipPackagePluginValidation -maximum-test-execution-time-allowance 60
 ```
 
-The result bundle `/tmp/kuyu-mojo-float32-renamed-strict.xcresult` reported 10
-of 10 tests passed. The installed real compiler was Mojo `1.0.0 (ed45d567)`.
+The current result bundle `/tmp/kuyu-mojo-preflight-full-1.xcresult` reported
+16 of 16 tests passed, including the six preflight contract tests and the
+strict CPU performance gate. The installed real compiler was Mojo `1.0.0
+(ed45d567)`.
 The measured Float32 maximum absolute residuals were `4.60e-7` for force,
 `2.10e-6` for derivative, `5.25e-7` for observables, `6.38e-8` for the 20-step
 RK4 state, and `4.59e-7` at the zero boundary. Runtime evidence covers macOS
