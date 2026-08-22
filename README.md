@@ -93,6 +93,18 @@ both source and staged roots. The target does not expose the device-context
 probe as a training worker; executable worker-protocol support remains a
 separate acceptance gate.
 
+`KuyuManasMojoAdapter` is the sole typed conversion boundary from persisted
+KuyuDataset v7 artifacts to Manas-owned in-memory learning contracts. It uses
+KuyuTraining's bounded snapshot reader and digest validation, recomputes exact
+on-policy distribution evidence including transform Jacobians, applies an
+injected `ManasLearningInputEncoding`, enforces transition and complete Float
+scalar budgets, and returns an immutable validated `ManasOnPolicyTrajectory`.
+The exact verifier is owned by the adapter and cannot be replaced by a caller.
+The direct-coordinate encoder requires explicit contract digests and rejects
+lossy `Double`-to-`Float` conversion. This target imports neither MLX nor MAX,
+does not own dataset persistence or Manas model structure, and does not yet
+implement bundle compatibility, worker snapshots, or model-store gates.
+
 The numerical and failure gates are defined in `PARITY_CONTRACT.md`, with
 executed results in `RELIABILITY_EVIDENCE.md`. The
 runtime identity binds the canonical program schema and digest to the executor

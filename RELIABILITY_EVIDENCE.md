@@ -1,5 +1,28 @@
 # Reliability evidence
 
+## 2026-08-22 KuyuDataset v7 to Manas adaptation
+
+| Claim | Evidence | Result |
+|---|---|---|
+| Persisted Kuyu data has one typed conversion boundary into Manas | `KuyuManasMojoAdapter` depends on `KuyuTrainingContracts`, `KuyuTrainingValidation`, and `ManasLearningContracts`; its source imports neither MLX nor MAX | Package graph and import scan passed; the adapter does not duplicate dataset persistence or Manas model structure |
+| On-policy behavior evidence cannot be fabricated during conversion | `KuyuDatasetManasLearningAdapter` fixed-owns `KuyuExactOnPolicyEvidenceVerifier`; callers cannot inject a no-op verifier. The verifier recomputes base Gaussian probability and identity, affine-tanh, or affine-sigmoid transform Jacobians, and compares action, transformed mean, and transformed log probability | Valid evidence for all three distributions and saturated tanh passed; fabricated log probability, invalid tolerance, non-finite values, transform/space mismatch, and unsupported versions are typed failures |
+| Materialization is bounded and conversion identity is explicit | Adapter initialization validates transition/scalar limits; the complete Float budget includes recurrent initial state, model inputs, policy actions, rewards/costs/log probability, behavior vectors, and optional value evidence; the direct encoder requires two SHA-256 contract digests | Transition overflow, scalar overflow, placeholder digest, and lossy `Double`-to-`Float` conversion tests passed as typed failures |
+| Fixed-history and recurrent semantics survive the boundary | The adapter constructs `ManasOnPolicyTrajectory`, whose initializer revalidates identity, dimensions, continuity, behavior identity, recurrent state chains, loss masks, and final boundary | Fixed-history and recurrent burn-in/loss-start fixtures passed and produced immutable Manas values |
+| Existing package behavior remains intact | Bounded arm64 `xcodebuild build-for-testing` followed by `xcodebuild test-without-building`; boundary validators; verbose source-risk audit; incomplete and concurrency pattern scans | Adapter target 20/20 and full package 46/46 passed at `/tmp/kuyu-mojo-manas-adapter-full-v3.xcresult`; blocker 0, 44 existing oversized-file review findings outside this package |
+
+The Swift 6.4 snapshot provides `libTesting.dylib`, but the installed Xcode 27
+beta did not copy it into the package test bundle. Verification therefore used
+the successful `xcodebuild build-for-testing` output, copied the snapshot's
+signed universal `libTesting.dylib` and `lib_TestingInterop.dylib` only into
+that DerivedData `PackageFrameworks` directory, and ran bounded `xcodebuild
+test-without-building`. No source, system toolchain, or persistent environment
+setting was changed by this runner workaround.
+
+This slice proves the final semantic conversion owner and its success/failure
+behavior. It does not prove Manas Mojo models or runtime, optimizer compute,
+bundle/model-store gates, an attempt-owned worker, learned improvement,
+application cutover, or native Jetson execution.
+
 ## 2026-08-22 canonical Metal dynamics acceptance
 
 | Claim | Evidence | Result |
@@ -97,6 +120,8 @@ native Jetson, sanitizer, or HIL qualification.
 | Accelerator workspace and status buffers | Call-local MAX host/device buffers | One acceptance call; one graph instance per GPU thread | Read after synchronization | Kernel only | Device-context call end |
 | Mojo workspace | Call-local `[Double]` or `[Float]` | Synchronous mutable borrow | Output reconstruction after return | Mojo ABI call only | Borrow end |
 | Physics and execution identity | Immutable `Sendable` values | Value isolation | Explicit identity API | None | Value lifetime |
+| Dataset adapter configuration | Immutable `Sendable` reader, encoder, verifier, and limits | Value isolation | `trajectory(from:)` | None | Adapter value lifetime |
+| Trajectory materialization | Call-local arrays over a reader-owned immutable snapshot | One synchronous conversion call | Manas trajectory construction after validation | Reader callback before return | Automatic at call end |
 
 There is no target-conditioned storage or concurrency contract in this slice.
 No lock contains I/O, `await`, event emission, or an external callback.

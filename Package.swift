@@ -17,6 +17,10 @@ let package = Package(
             targets: ["KuyuMojoDynamics"]
         ),
         .library(
+            name: "KuyuManasMojoAdapter",
+            targets: ["KuyuManasMojoAdapter"]
+        ),
+        .library(
             name: "KuyuMojoTrainingRuntime",
             targets: ["KuyuMojoTrainingRuntime"]
         ),
@@ -29,6 +33,7 @@ let package = Package(
         .package(path: "../kuyu-core"),
         .package(path: "../kuyu-physics"),
         .package(path: "../kuyu-training"),
+        .package(path: "../manas"),
         .package(
             url: "https://github.com/1amageek/swift-mojo.git",
             revision: "4a2382cc6e06cd4f5fe9f888474e3fa235a1acc1"
@@ -73,6 +78,15 @@ let package = Package(
             ]
         ),
         .target(
+            name: "KuyuManasMojoAdapter",
+            dependencies: [
+                "KuyuMojoCore",
+                .product(name: "KuyuTrainingContracts", package: "kuyu-training"),
+                .product(name: "KuyuTrainingValidation", package: "kuyu-training"),
+                .product(name: "ManasLearningContracts", package: "manas"),
+            ]
+        ),
+        .target(
             name: "KuyuMojoTrainingRuntime",
             dependencies: [
                 "KuyuMojoCore",
@@ -97,6 +111,15 @@ let package = Package(
             dependencies: [
                 "KuyuMojoCore",
                 .product(name: "MojoRuntime", package: "swift-mojo"),
+            ]
+        ),
+        .testTarget(
+            name: "KuyuManasMojoAdapterTests",
+            dependencies: [
+                "KuyuManasMojoAdapter",
+                .product(name: "KuyuTrainingContracts", package: "kuyu-training"),
+                .product(name: "KuyuTrainingValidation", package: "kuyu-training"),
+                .product(name: "ManasLearningContracts", package: "manas"),
             ]
         ),
         .testTarget(
