@@ -1,5 +1,20 @@
 # Reliability evidence
 
+## 2026-08-22 production Plant and IMU injection
+
+| Claim | Evidence | Result |
+|---|---|---|
+| Mojo CPU execution reaches Kuyu's production physics objects | `MojoInjectedPlantRuntimeTests` constructs the real `ReferenceQuadrotorPlantEngine` and `IMU6SensorField` with one `MojoScalarDynamicsExecutor`, advances eight RK4 ticks, and samples the IMU after every tick | Passed for Float64 and Float32; every state component, channel index, timestamp, and sensor value matched the Swift scalar oracle within the numeric-specific tolerance |
+| The executor boundary preserves failure semantics | KuyuPhysics' injected failure fixture throws from the same `ReferenceQuadrotorCanonicalExecuting` protocol used by Mojo | Plant integration and IMU sampling returned the typed failure; neither selected the scalar default |
+| Existing Mojo runtime and ABI behavior remains intact | `KUYU_MOJO_STRICT_PERFORMANCE_BUDGETS=1 xcodebuild test -quiet -scheme kuyu-mojo-Package -destination 'platform=macOS,arch=arm64' -maximum-test-execution-time-allowance 60` | 47 tests / 48 parameterized runs passed, failure 0, skip 0, at `/tmp/kuyu-mojo-injected-full/Logs/Test/Test-kuyu-mojo-Package-2026.08.22_18-36-42-+0900.xcresult` |
+| Workspace safety and boundaries remain intact | `validate-kuyu-boundaries.sh`, `validate-unconscious-boundaries.sh`, `audit-dangerous-code.sh --verbose`, incomplete-implementation and target-conditioned synchronization scans | Passed; blocker 0, 892 review findings, 44 existing files over 450 lines, no incomplete marker or target-conditioned state split in this change |
+
+This slice makes Mojo Float64/Float32 a real injectable Kuyu physics backend; it
+does not make batch accelerator execution an in-process control session. Metal
+and CUDA remain attempt-owned worker backends with receipt-bound lifecycle and
+hardware acceptance gates. Native Jetson execution remains open while the
+admitted device is offline.
+
 ## 2026-08-22 KuyuDataset v7 to Manas adaptation
 
 | Claim | Evidence | Result |

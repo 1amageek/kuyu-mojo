@@ -26,6 +26,14 @@ graph, and the observable graph for two scenarios. One GPU thread owns each
 graph instance; plan and runtime input storage are transferred separately, and
 host-visible results are read only after explicit synchronization.
 
+`MojoScalarDynamicsExecutor` also conforms directly to KuyuPhysics'
+`ReferenceQuadrotorCanonicalExecuting` boundary. The production
+`ReferenceQuadrotorPlantEngine` and `IMU6SensorField` accept that executor as a
+single retained dependency. Integration tests advance the real plant for eight
+RK4 ticks and sample the real IMU through both Mojo Float64 and Float32, compare
+every state and sensor channel against the Swift scalar oracle, and exercise no
+fallback branch.
+
 The canonical acceptance executable is an evidence tool, not the public Kuyu
 runtime executor or training worker. It creates a bounded device context for
 each acceptance call and deliberately omits worker lifecycle, cancellation,
