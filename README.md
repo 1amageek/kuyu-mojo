@@ -44,12 +44,14 @@ KUYU_MOJO_MAX_PIXI_PROJECT=/absolute/path/to/pixi-workspace \
   /absolute/path/to/new-output-directory
 ```
 
-The output contains `CanonicalCUDAAcceptance.mojo`, its AArch64 ELF object,
-and `CrossCompileEvidence.json`. The evidence records the canonical program,
-source and object digests, host/CPU/accelerator targets, embedded PTX identity,
-Mojo version, and pixi manifest/lock digests. It always records
-`artifactStatus: crossCompiledOnly` and `nativeAcceptance: false`; only native
-Jetson acceptance may advance those claims.
+The output contains `CanonicalCUDAAcceptance.mojo`, its AArch64 ELF object, the
+complete imported `Mojo/KuyuCanonicalDynamics` source closure, and
+`CrossCompileEvidence.json`. The object is compiled against the copied closure,
+not the repository source tree. The evidence records the canonical program,
+source, object and module-closure digests, host/CPU/accelerator targets,
+embedded PTX identity, Mojo version, and pixi manifest/lock digests. It always
+records `artifactStatus: crossCompiledOnly` and `nativeAcceptance: false`; only
+native Jetson acceptance may advance those claims.
 
 The pinned swift-mojo revision provides schema-1 accelerator runtime receipts,
 isolated worker bundles, and a public read-only bundle verifier. KuyuMojoCore's

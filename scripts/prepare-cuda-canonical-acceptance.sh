@@ -48,8 +48,29 @@ derived_data="$working_directory/DerivedData"
 source_file="$artifact_directory/CanonicalCUDAAcceptance.mojo"
 object_file="$artifact_directory/CanonicalCUDAAcceptance.o"
 evidence_file="$artifact_directory/CrossCompileEvidence.json"
+module_source_root="$repository_root/Mojo/KuyuCanonicalDynamics"
+module_artifact_root="$artifact_directory/Mojo/KuyuCanonicalDynamics"
 fixture_executable="$derived_data/Build/Products/Debug/kuyu-mojo-accelerator-acceptance-fixture"
-mkdir "$artifact_directory"
+mkdir -p "$module_artifact_root"
+
+if [[ -n "$(find "$module_source_root" -type l -print -quit)" ]]; then
+  echo "canonical Mojo module closure must not contain symbolic links" >&2
+  exit 70
+fi
+
+module_file_count=0
+while IFS= read -r module_source_file; do
+  module_relative_path="${module_source_file#"$module_source_root"/}"
+  module_destination="$module_artifact_root/$module_relative_path"
+  mkdir -p "$(dirname "$module_destination")"
+  cp "$module_source_file" "$module_destination"
+  module_file_count=$((module_file_count + 1))
+done < <(find "$module_source_root" -type f -print | LC_ALL=C sort)
+
+if [[ $module_file_count -eq 0 ]]; then
+  echo "canonical Mojo module closure is empty" >&2
+  exit 70
+fi
 
 env TOOLCHAINS=com.apple.dt.toolchain.XcodeDefault \
   python3 "$timeout_runner" --timeout 120 \
@@ -71,7 +92,7 @@ LLVM_PROFILE_FILE="$working_directory/default.profraw" \
   --manifest-path "$pixi_manifest" \
   --as-is \
   mojo build "$source_file" \
-  -I "$repository_root/Mojo" \
+  -I "$artifact_directory/Mojo" \
   --emit object \
   --target-triple aarch64-unknown-linux-gnu \
   --target-cpu cortex-a78ae \
@@ -126,6 +147,7 @@ python3 - \
   "$source_file" \
   "$object_file" \
   "$evidence_file" \
+  "$module_artifact_root" \
   "$pixi_manifest" \
   "$pixi_lock" \
   "$mojo_version" \
@@ -140,8 +162,9 @@ import sys
 source_path = pathlib.Path(sys.argv[1])
 object_path = pathlib.Path(sys.argv[2])
 evidence_path = pathlib.Path(sys.argv[3])
-pixi_manifest_path = pathlib.Path(sys.argv[4])
-pixi_lock_path = pathlib.Path(sys.argv[5])
+module_root = pathlib.Path(sys.argv[4])
+pixi_manifest_path = pathlib.Path(sys.argv[5])
+pixi_lock_path = pathlib.Path(sys.argv[6])
 
 def sha256(path: pathlib.Path) -> str:
     digest = hashlib.sha256()
@@ -149,6 +172,21 @@ def sha256(path: pathlib.Path) -> str:
         for block in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+module_files = []
+module_digest = hashlib.sha256()
+for module_path in sorted(path for path in module_root.rglob("*") if path.is_file()):
+    relative_path = module_path.relative_to(module_root.parent.parent).as_posix()
+    contents = module_path.read_bytes()
+    module_digest.update(relative_path.encode("utf-8"))
+    module_digest.update(b"\0")
+    module_digest.update(contents)
+    module_digest.update(b"\0")
+    module_files.append({
+        "byteCount": len(contents),
+        "path": relative_path,
+        "sha256": hashlib.sha256(contents).hexdigest(),
+    })
 
 evidence = {
     "artifactStatus": "crossCompiledOnly",
@@ -159,8 +197,8 @@ evidence = {
         "triple": "aarch64-unknown-linux-gnu",
     },
     "embeddedPTX": {
-        "target": sys.argv[9],
-        "version": sys.argv[8],
+        "target": sys.argv[10],
+        "version": sys.argv[9],
     },
     "files": {
         "object": {
@@ -174,11 +212,15 @@ evidence = {
             "sha256": sha256(source_path),
         },
     },
-    "format": sys.argv[7],
+    "format": sys.argv[8],
+    "moduleClosure": {
+        "files": module_files,
+        "sha256": module_digest.hexdigest(),
+    },
     "nativeAcceptance": False,
     "schemaVersion": 1,
     "toolchain": {
-        "mojoVersion": sys.argv[6].strip(),
+        "mojoVersion": sys.argv[7].strip(),
         "pixiLockSHA256": sha256(pixi_lock_path),
         "pixiManifestSHA256": sha256(pixi_manifest_path),
     },
