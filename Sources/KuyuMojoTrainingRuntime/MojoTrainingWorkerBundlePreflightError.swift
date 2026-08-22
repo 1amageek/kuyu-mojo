@@ -1,12 +1,12 @@
 import Foundation
 
 public enum MojoTrainingWorkerBundlePreflightError:
-    Error, Sendable, Equatable
+  Error, Sendable, Equatable
 {
-    case workerExecutableRelativePathMismatch(
-        expected: String,
-        actual: String
-    )
-    case acceleratorRuntimeRootMismatch(expected: URL, actual: URL)
-    case acceleratorExecutableURLMismatch(expected: URL, actual: URL)
+  case workerExecutableRelativePathMismatch(
+    expected: String,
+    actual: String
+  )
+  case acceleratorRuntimeRootMismatch(expected: URL, actual: URL)
+  case acceleratorLibraryURLMismatch(expected: URL, actual: URL)
 }

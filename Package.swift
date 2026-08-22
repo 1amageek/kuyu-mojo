@@ -3,136 +3,157 @@
 import PackageDescription
 
 let package = Package(
-    name: "kuyu-mojo",
-    platforms: [
-        .macOS(.v26),
-    ],
-    products: [
-        .library(
-            name: "KuyuMojoCore",
-            targets: ["KuyuMojoCore"]
-        ),
-        .library(
-            name: "KuyuMojoDynamics",
-            targets: ["KuyuMojoDynamics"]
-        ),
-        .library(
-            name: "KuyuManasMojoAdapter",
-            targets: ["KuyuManasMojoAdapter"]
-        ),
-        .library(
-            name: "KuyuMojoTrainingRuntime",
-            targets: ["KuyuMojoTrainingRuntime"]
-        ),
-        .executable(
-            name: "kuyu-mojo-accelerator-acceptance-fixture",
-            targets: ["KuyuMojoAcceleratorAcceptanceFixture"]
-        ),
-    ],
-    dependencies: [
-        .package(path: "../kuyu-core"),
-        .package(path: "../kuyu-physics"),
-        .package(path: "../kuyu-training"),
-        .package(path: "../manas"),
-        .package(
-            url: "https://github.com/1amageek/swift-mojo.git",
-            revision: "4a2382cc6e06cd4f5fe9f888474e3fa235a1acc1"
-        ),
-    ],
-    targets: [
-        .binaryTarget(
-            name: "SwiftMojo_KuyuMojoDynamics_ABI",
-            path: "Generated/KuyuMojoDynamics/SwiftMojo_KuyuMojoDynamics_ABI.xcframework"
-        ),
-        .binaryTarget(
-            name: "SwiftMojo_KuyuMojoDynamics_ABI_Linux",
-            path: "Generated/KuyuMojoDynamics/SwiftMojo_KuyuMojoDynamics_ABI.artifactbundle"
+  name: "kuyu-mojo",
+  platforms: [
+    .macOS(.v26)
+  ],
+  products: [
+    .library(
+      name: "KuyuMojoCore",
+      targets: ["KuyuMojoCore"]
+    ),
+    .library(
+      name: "KuyuMojoDynamics",
+      targets: ["KuyuMojoDynamics"]
+    ),
+    .library(
+      name: "KuyuManasMojoAdapter",
+      targets: ["KuyuManasMojoAdapter"]
+    ),
+    .library(
+      name: "KuyuMojoTrainingRuntime",
+      targets: ["KuyuMojoTrainingRuntime"]
+    ),
+    .library(
+      name: "KuyuMojoAcceleratorRuntime",
+      targets: ["KuyuMojoAcceleratorRuntime"]
+    ),
+    .executable(
+      name: "kuyu-mojo-accelerator-acceptance-fixture",
+      targets: ["KuyuMojoAcceleratorAcceptanceFixture"]
+    ),
+  ],
+  dependencies: [
+    .package(path: "../kuyu-core"),
+    .package(path: "../kuyu-physics"),
+    .package(path: "../kuyu-training"),
+    .package(path: "../manas"),
+    .package(
+      url: "https://github.com/1amageek/swift-mojo.git",
+      revision: "dcbbac6fe64043a59a3d847f02b25321604ae7bb"
+    ),
+  ],
+  targets: [
+    .binaryTarget(
+      name: "SwiftMojo_KuyuMojoDynamics_ABI",
+      path: "Generated/KuyuMojoDynamics/SwiftMojo_KuyuMojoDynamics_ABI.xcframework"
+    ),
+    .binaryTarget(
+      name: "SwiftMojo_KuyuMojoDynamics_ABI_Linux",
+      path: "Generated/KuyuMojoDynamics/SwiftMojo_KuyuMojoDynamics_ABI.artifactbundle"
+    ),
+    .target(
+      name: "KuyuMojoCore",
+      dependencies: [
+        .product(name: "MojoRuntime", package: "swift-mojo")
+      ]
+    ),
+    .target(
+      name: "KuyuMojoDynamics",
+      dependencies: [
+        "KuyuMojoCore",
+        .product(name: "KuyuCore", package: "kuyu-core"),
+        .product(name: "KuyuPhysics", package: "kuyu-physics"),
+        .product(name: "Mojo", package: "swift-mojo"),
+        .target(
+          name: "SwiftMojo_KuyuMojoDynamics_ABI",
+          condition: .when(platforms: [.macOS])
         ),
         .target(
-            name: "KuyuMojoCore",
-            dependencies: [
-                .product(name: "MojoRuntime", package: "swift-mojo"),
-            ]
+          name: "SwiftMojo_KuyuMojoDynamics_ABI_Linux",
+          condition: .when(platforms: [.linux])
         ),
-        .target(
-            name: "KuyuMojoDynamics",
-            dependencies: [
-                "KuyuMojoCore",
-                .product(name: "KuyuCore", package: "kuyu-core"),
-                .product(name: "KuyuPhysics", package: "kuyu-physics"),
-                .product(name: "Mojo", package: "swift-mojo"),
-                .target(
-                    name: "SwiftMojo_KuyuMojoDynamics_ABI",
-                    condition: .when(platforms: [.macOS])
-                ),
-                .target(
-                    name: "SwiftMojo_KuyuMojoDynamics_ABI_Linux",
-                    condition: .when(platforms: [.linux])
-                ),
-            ],
-            plugins: [
-                .plugin(
-                    name: "MojoBuildPlugin",
-                    package: "swift-mojo"
-                ),
-            ]
+      ],
+      plugins: [
+        .plugin(
+          name: "MojoBuildPlugin",
+          package: "swift-mojo"
+        )
+      ]
+    ),
+    .target(
+      name: "KuyuManasMojoAdapter",
+      dependencies: [
+        "KuyuMojoCore",
+        .product(name: "KuyuTrainingContracts", package: "kuyu-training"),
+        .product(name: "KuyuTrainingValidation", package: "kuyu-training"),
+        .product(name: "ManasLearningContracts", package: "manas"),
+      ]
+    ),
+    .target(
+      name: "KuyuMojoTrainingRuntime",
+      dependencies: [
+        "KuyuMojoCore",
+        .product(
+          name: "KuyuTrainingRuntime",
+          package: "kuyu-training"
         ),
-        .target(
-            name: "KuyuManasMojoAdapter",
-            dependencies: [
-                "KuyuMojoCore",
-                .product(name: "KuyuTrainingContracts", package: "kuyu-training"),
-                .product(name: "KuyuTrainingValidation", package: "kuyu-training"),
-                .product(name: "ManasLearningContracts", package: "manas"),
-            ]
-        ),
-        .target(
-            name: "KuyuMojoTrainingRuntime",
-            dependencies: [
-                "KuyuMojoCore",
-                .product(
-                    name: "KuyuTrainingRuntime",
-                    package: "kuyu-training"
-                ),
-            ]
-        ),
-        .executableTarget(
-            name: "KuyuMojoAcceleratorAcceptanceFixture",
-            dependencies: ["KuyuMojoCore", "KuyuMojoDynamics"]
-        ),
-        .testTarget(
-            name: "KuyuMojoDynamicsTests",
-            dependencies: [
-                "KuyuMojoDynamics",
-                "KuyuMojoCore",
-                .product(name: "KuyuCore", package: "kuyu-core"),
-                .product(name: "KuyuPhysics", package: "kuyu-physics"),
-            ]
-        ),
-        .testTarget(
-            name: "KuyuMojoCoreTests",
-            dependencies: [
-                "KuyuMojoCore",
-                .product(name: "MojoRuntime", package: "swift-mojo"),
-            ]
-        ),
-        .testTarget(
-            name: "KuyuManasMojoAdapterTests",
-            dependencies: [
-                "KuyuManasMojoAdapter",
-                .product(name: "KuyuTrainingContracts", package: "kuyu-training"),
-                .product(name: "KuyuTrainingValidation", package: "kuyu-training"),
-                .product(name: "ManasLearningContracts", package: "manas"),
-            ]
-        ),
-        .testTarget(
-            name: "KuyuMojoTrainingRuntimeTests",
-            dependencies: [
-                "KuyuMojoTrainingRuntime",
-                "KuyuMojoCore",
-                .product(name: "KuyuTraining", package: "kuyu-training"),
-                .product(name: "MojoRuntime", package: "swift-mojo"),
-            ]
-        ),
-    ]
+      ]
+    ),
+    .target(
+      name: "KuyuMojoAcceleratorRuntime",
+      dependencies: [
+        "KuyuMojoCore",
+        .product(name: "Mojo", package: "swift-mojo"),
+        .product(name: "MojoRuntime", package: "swift-mojo"),
+      ]
+    ),
+    .executableTarget(
+      name: "KuyuMojoAcceleratorAcceptanceFixture",
+      dependencies: ["KuyuMojoCore", "KuyuMojoDynamics"]
+    ),
+    .testTarget(
+      name: "KuyuMojoDynamicsTests",
+      dependencies: [
+        "KuyuMojoDynamics",
+        "KuyuMojoCore",
+        .product(name: "KuyuCore", package: "kuyu-core"),
+        .product(name: "KuyuPhysics", package: "kuyu-physics"),
+      ]
+    ),
+    .testTarget(
+      name: "KuyuMojoCoreTests",
+      dependencies: [
+        "KuyuMojoCore",
+        .product(name: "MojoRuntime", package: "swift-mojo"),
+      ]
+    ),
+    .testTarget(
+      name: "KuyuManasMojoAdapterTests",
+      dependencies: [
+        "KuyuManasMojoAdapter",
+        .product(name: "KuyuTrainingContracts", package: "kuyu-training"),
+        .product(name: "KuyuTrainingValidation", package: "kuyu-training"),
+        .product(name: "ManasLearningContracts", package: "manas"),
+      ]
+    ),
+    .testTarget(
+      name: "KuyuMojoTrainingRuntimeTests",
+      dependencies: [
+        "KuyuMojoTrainingRuntime",
+        "KuyuMojoCore",
+        .product(name: "KuyuTraining", package: "kuyu-training"),
+        .product(name: "MojoRuntime", package: "swift-mojo"),
+      ]
+    ),
+    .testTarget(
+      name: "KuyuMojoAcceleratorRuntimeTests",
+      dependencies: [
+        "KuyuMojoAcceleratorRuntime",
+        "KuyuMojoCore",
+        .product(name: "Mojo", package: "swift-mojo"),
+        .product(name: "MojoRuntime", package: "swift-mojo"),
+      ]
+    ),
+  ]
 )

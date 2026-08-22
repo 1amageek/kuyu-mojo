@@ -1,6 +1,23 @@
 # Reliability evidence
 
-## 2026-08-22 attempt worker and accelerator runtime separation
+## 2026-08-22 schema-3 callable accelerator session
+
+| Claim | Evidence | Result |
+|---|---|---|
+| Production admission is bound to a callable library rather than an evidence executable | swift-mojo schema-3 bundle `2e89bda4bc15fb935f5df9cb1a43f029336653ef095bea62d60076dbb3d84f99` and receipt `3969ad6b6d12dd2416aa745bdc4037ad2faba85bd24b34d0abd3d5eb1c8be747` bind module `SwiftMojo_KuyuMojoAcceleratorSession_ABI`, input graph `d35ef968…`, its generated header, exported symbols, runtime libraries, factory `createKuyuMojoAcceleratorSession`, and execution `executeKuyuMojoAcceleratorBatch` | Public preflight accepted the exact identity and rejected schema, bundle, receipt, target, module, graph, function, signature, and factory-relationship drift as typed failures |
+| The generated ABI reaches real Metal through a persistent session | Fresh runtime-library verification was followed by a linked C ABI probe under `env -i` and by `DynamicMojoAcceleratorRuntimeLoader`; each created an Apple M4 Metal session, executed two canonical Float32 graph requests through the same context and reusable buffer owner, then shut down session before library | `metal_session_create`, `metal_session_batch`, `metal_session_reuse`, and `metal_session_shutdown` passed; Swift returned `[41, 42]` then `[43, 44]` from the real bundle |
+| The generic training launcher never mistakes the library for its worker | `MojoTrainingWorkerBundlePreflight` returns only the outer Kuyu worker path and independently verifies the nested runtime library on source and attempt-owned staged roots; the process fixture places executable `/usr/bin/true` at the worker path and non-executable bytes at the library path | The worker reached status 0 and the expected missing durable outcome; source and staged real-bundle paths passed in the final full result below |
+| Foreign-call concurrency preserves ownership and ordered shutdown | A deterministic C fixture blocks session creation or execution after entering the ABI. Concurrent library shutdown reports `activeCreations: 1`; concurrent session invocation and shutdown report `MojoSessionError.busy`; release then permits session followed by library shutdown | All 6 loader tests passed as part of the final full result below |
+| The migration does not regress existing canonical dynamics or strict CPU performance | Full Xcode build-for-testing and test-without-building ran with `KUYU_MOJO_STRICT_PERFORMANCE_BUDGETS=1` and the real schema-3 Metal bundle | 55 tests / 56 runs passed, failure 0, skip 0, at `/tmp/kuyu-mojo-schema3-final-dd/Logs/Test/Test-kuyu-mojo-Package-2026.08.22_22-36-19-+0900.xcresult` |
+| Source-risk and architecture boundaries remain enforced | `validate-kuyu-boundaries.sh`, `validate-unconscious-boundaries.sh`, verbose dangerous-code audit, incomplete-implementation scan, target-conditioned synchronization scan, swift-format lint, and structural scan | Both validators passed; audit blocker 0 with 44 reported review call sites read, all outside `kuyu-mojo`; no incomplete implementation or target-conditioned state split exists in this runtime target |
+
+This slice completes the callable Metal library, verified admission, persistent
+session, attempt staging, and synchronous concurrency/lifetime boundary. It does
+not yet provide the authenticated worker executable that consumes this loader,
+the Manas Mojo optimizer, sustained accelerator performance qualification, or
+native Jetson CUDA execution.
+
+## 2026-08-22 attempt worker and schema-1 runtime separation (historical, superseded)
 
 | Claim | Evidence | Result |
 |---|---|---|
@@ -11,10 +28,13 @@
 | The accepted Metal closure survives the real attempt staging path | The same focused suite ran with `KUYU_MOJO_TEST_ACCELERATOR_BUNDLE=/tmp/kuyu-mojo-accelerator-canonical-bundle-v1`; `TrainingRunWorkerProcessLauncher` verified the source outer bundle, staged its complete real canonical runtime closure, re-verified the nested staged runtime, and launched the outer Kuyu worker path | 10/10 passed, failure 0, skip 0, in `/tmp/kuyu-mojo-worker-boundary-real-final/Logs/Test/Test-kuyu-mojo-Package-2026.08.22_19-21-18-+0900.xcresult` |
 | Existing Mojo behavior and the strict CPU performance floor remain intact | Full non-parallel `kuyu-mojo-Package` test with the real accelerator bundle and `KUYU_MOJO_STRICT_PERFORMANCE_BUDGETS=1` | 52 tests / 53 parameterized runs passed, failure 0, skip 0, in `/tmp/kuyu-mojo-worker-boundary-full/Logs/Test/Test-kuyu-mojo-Package-2026.08.22_19-07-56-+0900.xcresult` |
 
-This closes executable identity and staging composition only. It does not claim
+This historical slice closed executable identity and staging composition only.
+It did not claim
 that the Kuyu worker has a Mojo optimizer backend, owns a production MAX device
 session, or has passed cancellation, shutdown, performance, or native Jetson
-gates.
+gates. The schema-3 callable session above supersedes its production admission
+contract while retaining the schema-1 executable as reproducible acceptance
+evidence.
 
 ## 2026-08-22 production Plant and IMU injection
 
@@ -66,7 +86,7 @@ application cutover, or native Jetson execution.
 | Public Kuyu preflight admits only that exact canonical bundle | Full package test used `KUYU_MOJO_TEST_ACCELERATOR_BUNDLE=/tmp/kuyu-mojo-accelerator-canonical-bundle-v1` and exercised both `KuyuMojoCore` and `KuyuMojoTrainingRuntime` source/relocation checks | 26/26 passed at `/tmp/kuyu-mojo-accelerator-neutral-final.xcresult`, including the strict CPU performance gate |
 | The identical canonical fixture cross-compiles for Jetson CUDA | Metal and CUDA generated sources differ only in the declared device label; the CUDA source compiled for `aarch64-unknown-linux-gnu`, `cortex-a78ae`, and CLI accelerator `sm_87` | Produced a 201,528-byte AArch64 ELF object with SHA-256 `ef696d6dbc8dfe42af2374e828e98b252d8d67471c3c158554e27a4622723b1b`; embedded PTX is version 8.1 and targets `sm_80`, so native Jetson link/run and specialization remain open |
 | The CUDA cross-compile handoff is deterministic, source-complete, and cannot claim native acceptance | Two independent runs of `scripts/prepare-cuda-canonical-acceptance.sh` compared the complete nested output trees; the checked-in imported module was copied before compilation and that copy was used as the compiler search root; rejection checks covered an existing output, a relative output, missing toolchain identity, and an intentional compiler failure | Both successful runs produced source `3467e04cd3b032d750de6825c8e0242d4f276ce78eb3b2dbb5960c170a635433`, object `ef696d6dbc8dfe42af2374e828e98b252d8d67471c3c158554e27a4622723b1b`, module closure `8ddf1b9ec3b446c50452ad5c0213415db9025cf7361853eb9754819497a71164`, and evidence `97f7af7bce2edfb409b7ea8a9b9afad7bb2e2d5b2fcbb624444cba1bf52ac64c`; evidence fixes `crossCompiledOnly` and `nativeAcceptance: false`, while failure published no partial output and leaked no temporary directory |
-| Checked-in CPU ABIs remain source-derived after the shared interpreter refactor | `swift package --disable-sandbox mojo inspect --target KuyuMojoDynamics` on the final generated artifacts | Passed; two synchronous Float32/Float64 bindings, input graph `74ff401f1cdeca4559652bbd8d0aa38562cc264a48e9ce87f247377d50591cea`, aggregate artifact `77490acc7cbecc26b6f77bc1d2f9a5e37d3d36d113291b35aace839048b0d97b` |
+| Checked-in CPU ABIs remain source-derived after the shared interpreter refactor | `swift package --disable-sandbox mojo inspect --target KuyuMojoDynamics` on the final generated artifacts | Passed; two synchronous Float32/Float64 bindings, input graph `94f47592aa548f600e1c92d698592fadabd73a9c4a6d68da1687377c7df59d9f`, aggregate artifact `2e4d8f9e49de4a2b09ccd17632b9ceb25ce0ccffb7e0c20a5e86defb09edf326` |
 | Workspace boundaries and source-risk policy still hold | `validate-kuyu-boundaries.sh`, `validate-unconscious-boundaries.sh`, `audit-dangerous-code.sh --verbose`, the incomplete-implementation scan, and `bash -n` for the acceptance scripts | Passed; zero audit blockers, zero incomplete markers, and 44 pre-existing oversized-file review findings outside this package |
 
 This is a canonical hardware-acceptance slice, not a production accelerator
@@ -153,6 +173,15 @@ native Jetson, sanitizer, or HIL qualification.
 | Physics and execution identity | Immutable `Sendable` values | Value isolation | Explicit identity API | None | Value lifetime |
 | Dataset adapter configuration | Immutable `Sendable` reader, encoder, verifier, and limits | Value isolation | `trajectory(from:)` | None | Adapter value lifetime |
 | Trajectory materialization | Call-local arrays over a reader-owned immutable snapshot | One synchronous conversion call | Manas trajectory construction after validation | Reader callback before return | Automatic at call end |
+| Dynamic runtime library token and counters | `Mutex<State>` containing a process-local address token and session/creation counters | Short synchronous memory-only critical sections | `isShutdown` | begin/finish creation, register/release session, shutdown | `dlclose` after the lock and after active counts reach zero |
+| Mojo accelerator session handle and resources | swift-mojo `MojoSessionOwner` with `Mutex<State>` | One synchronous foreign borrow at a time | capabilities and `isShutdown` | execute borrow, resource registration, shutdown | Generated shutdown after borrows/resources reach zero |
 
 There is no target-conditioned storage or concurrency contract in this slice.
 No lock contains I/O, `await`, event emission, or an external callback.
+
+| Target | Storage and isolation | Read/mutation entry points | Shutdown/verification status |
+|---|---|---|---|
+| Native macOS Metal | `Mutex<State>` library owner plus `MojoSessionOwner` | Identical protocol methods shown above | Runtime concurrency and real Metal lifecycle passed |
+| Native Linux / Jetson CUDA | Same source, `Mutex<State>`, and Glibc loader boundary | Same protocol methods; no raw-state branch | Native link/run remains unverified while the admitted Jetson is offline |
+| WASM | Dynamic loading product is unsupported; no alternative storage declaration exists | No callable runtime path | Not compiled or claimed |
+| Embedded | Dynamic loading product is unsupported; no raw pointer, weakened `Sendable`, or no-op lock branch exists | No callable runtime path | Not compiled or claimed |

@@ -11,7 +11,7 @@ CanonicalDynamicsProgram
             -> Mojo Float64 / Float32 CPU execution
             -> Float32 plan + batched runtime inputs
                 -> backend-neutral accelerator acceptance source
-                    -> Metal runtime bundle (native accepted)
+                    -> schema-3 Metal session library (native accepted)
                     -> CUDA AArch64 handoff (cross-compiled)
 ```
 
@@ -79,20 +79,22 @@ cross-compile evidence, Wendy CLI identity, and a typed native receipt. An
 offline device produces a failed receipt and no deploy; an OS mismatch is
 rejected before build or deployment.
 
-The pinned swift-mojo revision provides schema-1 accelerator runtime receipts,
-isolated runtime bundles, and a public read-only bundle verifier. KuyuMojoCore's
-`MojoAcceleratorWorkerBundlePreflighting` boundary admits the contained runtime
-executable only after the schema, bundle digest, receipt digest, target, managed
-tree, loader policy, and executable-relative path pass validation. That
-executable is an accelerator evidence/backend resource, not the authenticated
-Kuyu training worker, and the verifier does not select CPU as a fallback. The
-backend-neutral generator's canonical Metal object and its exact four-library
-AsyncRT/KGEN closure reproducibly produce receipt
-`6d04ae4e8a0cdc9320316e417ac5a63e2d6d64ea8f02f872f9425de8b16687be`
+The pinned swift-mojo revision provides schema-3 callable runtime-library
+bundles and a public read-only verifier. KuyuMojoCore's
+`MojoAcceleratorRuntimeBundlePreflighting` boundary admits a library only after
+the schema, bundle and receipt digests, target, module, input graph, generated
+header, managed tree, loader policy, and the typed session-factory/execution
+binding relationship pass validation. `KuyuMojoAcceleratorRuntime` then loads
+only the verified dylib, checks its static ABI, graph identity, and binding IDs,
+and retains the loader image for every session borrow. It never selects CPU as
+a fallback. The generated Metal session library and its exact four-library
+AsyncRT/KGEN closure produce receipt
+`3969ad6b6d12dd2416aa745bdc4037ad2faba85bd24b34d0abd3d5eb1c8be747`
 and bundle
-`2c6e4b91593af4db7fc939cfa4c72d1fa534eaf36cd6705f78f3b0c134040ae8`.
-Both the original and relocated bundle pass fresh verification and execute all
-11 canonical graph checks under `env -i`.
+`2e89bda4bc15fb935f5df9cb1a43f029336653ef095bea62d60076dbb3d84f99`.
+Fresh verification plus an `env -i` probe and the Swift loader execute repeated
+canonical graph calls through one persistent Apple M4 Metal session, followed
+by ordered session and library shutdown.
 
 `KuyuMojoTrainingRuntime` composes that backend-owned verification with
 `KuyuTrainingRuntime`'s generic executable-bundle contract. A
@@ -101,11 +103,12 @@ the nested accelerator runtime. `MojoTrainingWorkerBundlePreflight` returns the
 outer Kuyu worker as the executable source while independently re-verifying the
 nested runtime on both source and attempt-owned staged roots. The generic
 stager hashes and makes the complete outer tree read-only. A process test places
-`/usr/bin/true` at the Kuyu worker path and `/usr/bin/false` at the accelerator
-evidence path; the generic launcher reaches the former and reports its zero exit
-before the expected missing-outcome failure. Production backend execution,
-device-session lifetime, progress, cancellation, and ordered shutdown remain
-separate acceptance gates.
+`/usr/bin/true` at the Kuyu worker path and non-executable bytes at the nested
+accelerator-library path; the generic launcher reaches only the former and
+reports its zero exit before the expected missing-outcome failure. A real-bundle
+test also re-verifies the schema-3 library after it is copied into the
+attempt-owned staged tree. Progress, cancellation, result publication, and
+worker crash recovery remain separate acceptance gates.
 
 `KuyuManasMojoAdapter` is the sole typed conversion boundary from persisted
 KuyuDataset v7 artifacts to Manas-owned in-memory learning contracts. It uses
