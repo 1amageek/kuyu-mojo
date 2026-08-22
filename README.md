@@ -53,6 +53,24 @@ embedded PTX identity, Mojo version, and pixi manifest/lock digests. It always
 records `artifactStatus: crossCompiledOnly` and `nativeAcceptance: false`; only
 native Jetson acceptance may advance those claims.
 
+When an admitted Jetson is reachable, run the native gate with a new evidence
+directory:
+
+```bash
+scripts/accept-cuda-canonical-on-jetson.sh \
+  /absolute/path/to/cuda-handoff \
+  /absolute/path/to/new-native-evidence-directory \
+  wendyos-valiant-iris.local
+```
+
+The host gate validates the handoff before contacting the device, requires
+WendyOS `0.18.1`, AArch64, NVIDIA, and Jetson Orin identities, and only then
+builds and runs the digest-pinned MAX acceptance container. Both accepted and
+post-contact failed attempts preserve device info, the run log, the exact
+cross-compile evidence, Wendy CLI identity, and a typed native receipt. An
+offline device produces a failed receipt and no deploy; an OS mismatch is
+rejected before build or deployment.
+
 The pinned swift-mojo revision provides schema-1 accelerator runtime receipts,
 isolated worker bundles, and a public read-only bundle verifier. KuyuMojoCore's
 `MojoAcceleratorWorkerBundlePreflighting` boundary accepts a worker executable

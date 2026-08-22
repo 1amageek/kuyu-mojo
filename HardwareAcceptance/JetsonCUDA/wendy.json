@@ -1,0 +1,10 @@
+{
+  "appId": "com.1amageek.kuyu-mojo-cuda-acceptance",
+  "platform": "linux",
+  "version": "1.0.0",
+  "entitlements": [
+    {
+      "type": "gpu"
+    }
+  ]
+}

@@ -24,6 +24,8 @@ distribution `26.5.0`, MAX `26.5.0`, and Mojo `1.0.0 (ed45d567)` on
 | Cross-compilation produces a real canonical AArch64 ELF object | The same generator's CUDA fixture emitted a 201,528-byte ELF64 AArch64 relocatable object with SHA-256 `ef696d6dbc8dfe42af2374e828e98b252d8d67471c3c158554e27a4622723b1b` | Canonical host architecture generation and CUDA evidence identity are proven, but native link and execution are not |
 | The CUDA handoff is reproducible, source-complete, and toolchain-bound | Two independent runs of `scripts/prepare-cuda-canonical-acceptance.sh` produced identical source `3467e04c…`, object `ef696d6d…`, imported module closure `8ddf1b9e…`, and evidence `97f7af7b…`; the object is compiled against the copied closure, and the evidence binds Mojo `1.0.0 (ed45d567)` plus pixi manifest `404c7d32…` and lock `3f61eabd…` | Jetson admission can reject changed source, object, module closure, canonical program, target, or toolchain before attempting native link/run |
 | Cross-compiled `DeviceContext` code embeds PTX targeted at `sm_80` | Canonical object inspection found PTX 8.1 with `.target sm_80` despite the CLI `sm_87` target | The PTX is compatible with Orin JIT, but native `sm_87` specialization must be inspected on Jetson before qualification |
+| Modular MAX 26.5.0 provides a pinned Linux ARM64 NVIDIA image | Registry inspection resolved index `cb38ee4e…` to Linux ARM64 manifest `4566cb6f…`, whose OCI configuration declares ARM64, CUDA 13.0, and Modular revision `ed45d567` | Native acceptance uses this exact manifest rather than a mutable tag or an ambient Jetson toolchain |
+| Wendy admission is fail-closed before deployment | The host runner requires exact WendyOS `0.18.1`, AArch64, NVIDIA, and Jetson Orin device fields before invoking `wendy run`; GPU is its only entitlement | An offline, wrong-OS, wrong-architecture, wrong-vendor, or wrong-device response produces no deployment and cannot become native success |
 
 The device compatibility source is the official
 [Mojo system requirements](https://mojolang.org/docs/requirements/). The MAX
@@ -121,8 +123,8 @@ discovered through an uncontrolled system search path.
 | Gate | macOS Metal | Jetson CUDA |
 |---|---|---|
 | Receipt | Canonical Metal object and four-library MAX closure verified as receipt `6d04ae4e…` | Source-complete cross-compile handoff `97f7af7b…` available; native ELF object/shared-library receipt pending |
-| Toolchain | Metal Toolchain `v27.1.5237.12` present and used | Cross-compiler locked by pixi manifest `404c7d32…` and lock `3f61eabd…`; native Modular/MAX and CUDA toolchain still required |
-| Build | Exact `metal:4` bundle `2c6e4b91…` links all declared MAX dylibs | Native AArch64 worker links declared MAX shared libraries |
+| Toolchain | Metal Toolchain `v27.1.5237.12` present and used | Cross-compiler locked by pixi manifest `404c7d32…` and lock `3f61eabd…`; native container fixed to MAX image manifest `4566cb6f…` |
+| Build | Exact `metal:4` bundle `2c6e4b91…` links all declared MAX dylibs | Dockerfile static validation passed; native AArch64 image build and executable link still require sufficient builder storage or the admitted device |
 | Device | Real Apple GPU context and kernel execution in original and relocated workers | Real Orin `sm_87` context |
 | Numeric | CPU/Metal Float32 differential passed all outputs for 11 graphs × 2 scenarios; Float64 Metal is rejected as a typed compile failure | Float32 kernel; declared capability negotiation |
 | Behavior | Canonical transfer, kernel execution, synchronization, original execution, and relocated execution passed; malformed-device-input tests and production shutdown remain | Same plus native Jetson link/run and PTX/SASS target inspection |

@@ -22,6 +22,22 @@ attempt-owned worker protocol, cancellation/shutdown races, sustained batch
 performance, training correctness, native CUDA execution, native Jetson
 execution, sanitizer, or HIL qualification.
 
+## 2026-08-22 Jetson CUDA admission and native runner
+
+| Claim | Evidence | Result |
+|---|---|---|
+| The native environment cannot drift to a mutable MAX image | Direct OCI manifest inspection of `modular/max-nvidia-base:26.5.0` resolved index `cb38ee4e04da5fb84eb4864b83098afd281f894971111c6ef059b8f8d0a9a5f8` and Linux ARM64 manifest `4566cb6f9ff3b51dc71542066f9dc72de27a823ea7b5c4613bd883ad71c1c57e`; its configuration reports ARM64, CUDA 13.0, and revision `ed45d567` | `HardwareAcceptance/JetsonCUDA/Dockerfile` uses the platform manifest digest directly, checks `Mojo 1.0.0 (ed45d567)`, and installs nothing from mutable operating-system repositories |
+| Only the exact source-complete handoff can enter native acceptance | `validate_handoff.py` re-hashes the fixed evidence, canonical source, AArch64 object, every module file, aggregate module closure, target, PTX identity, and managed tree while rejecting symbolic links and extra files | Current handoff passed; the prior source-incomplete handoff failed with status 70 before any device access |
+| Device admission cannot silently mutate or deploy to the wrong target | `HardwareAcceptance/JetsonCUDA/test_host_gate.py` exercises admitted WendyOS 0.18.1/AArch64/NVIDIA/Jetson Orin, incomplete native evidence, WendyOS 0.18.2, offline-device, relocatable-object, and unexpected-handoff-tree responses through the exact host orchestration with a bounded fake CLI | Accepted orchestration preserved all 11 ordered graph markers and a typed accepted receipt; pre-deploy rejections invoked no run path, while incomplete post-run evidence remained a typed failure |
+| Offline hardware is explicit evidence rather than false success | `scripts/accept-cuda-canonical-on-jetson.sh` queried the pinned `wendyos-valiant-iris.local` identity with the installed Wendy CLI and a 20-second process-group timeout | Failed with status 70 and wrote `/tmp/kuyu-jetson-offline-receipt-v2`; receipt SHA-256 `b2736ac79e25f08f9eaf8551242882841be82a6e368b373574863f72237d21df`, `nativeAcceptance: false`, no device identity, and no deployment |
+| The container build contract is structurally valid but not yet executed | `wendy json validate` passed the GPU-only manifest; `docker buildx build --check --platform linux/arm64` reported no warnings against the pinned manifest | Full local build stopped while registering a base layer because the host had only 2.2 GiB free. No image or native result was claimed; unrelated Docker caches were not pruned |
+
+The accepted host-path fixture proves admission, routing, ordered marker
+validation, and receipt composition only. It is not Jetson execution evidence.
+Native acceptance remains open until the real device passes native Mojo
+compilation, CUDA device execution, all 11 graph differentials, and the final
+terminal marker inside the GPU-entitled container.
+
 ## 2026-08-21 CPU Float64 and Float32 canonical dynamics
 
 | Claim | Evidence | Result |
