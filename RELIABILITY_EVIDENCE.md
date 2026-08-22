@@ -1,5 +1,19 @@
 # Reliability evidence
 
+## 2026-08-23 Manas Adam verified-runtime adapter
+
+| Claim | Evidence | Result |
+|---|---|---|
+| Kuyu can provide a verified accelerator session without taking ownership of Adam semantics | `KuyuManasMojoAdamOptimizerSessionFactory` composes the public bundle preflight and dynamic loader with `ManasMojoAdamOptimizerSession`; Kuyu routes the six public operation names but never decodes a payload or creates a proposal token | The focused fixture observed initialization and proposal through the exact Manas ABI, while status 35 returned `proposalAlreadyPending` from Manas |
+| Artifact or ABI drift cannot select another backend or operation | Factory construction accepts only Metal/CUDA and requires the factory plus ordered execution names to equal `ManasMojoAdamABI`; the runtime session repeats the ordered-name check before Manas initialization | CPU, mismatched manifest operations, and mismatched runtime operations failed before optimizer use; the mismatch path released session before runtime |
+| Creation and initialization failures preserve ownership order | Session-creation failure closes the loaded runtime; after a session exists, Manas initialization failure closes the transport, which shuts down session before library | Status 23 returned `invalidInitialState`; lifecycle observations were exactly `session.shutdown`, then `runtime.shutdown`; failed creation observed runtime shutdown only |
+| Existing Kuyu/Manas adaptation remains intact | arm64 `xcodebuild build` completed the production adapter target; the complete `KuyuManasMojoAdapterTests` target exercised the new factory alongside dataset and on-policy conversion | 25 tests in 4 suites passed with failure 0 at `/tmp/kuyu-mojo-adam-adapter-dd/Logs/Test/Test-kuyu-mojo-Package-2026.08.23_01-54-41-+0900.xcresult` |
+
+This slice closes the typed Swift ownership and routing seam. It does not claim
+device-resident Adam execution: the Manas-owned Metal/CUDA Mojo source, its
+schema-3 bundles, real Metal parity, and native Jetson CUDA evidence remain
+separate gates.
+
 ## 2026-08-23 ordered accelerator session operations
 
 | Claim | Evidence | Result |

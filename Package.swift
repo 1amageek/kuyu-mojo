@@ -85,9 +85,12 @@ let package = Package(
       name: "KuyuManasMojoAdapter",
       dependencies: [
         "KuyuMojoCore",
+        "KuyuMojoAcceleratorRuntime",
         .product(name: "KuyuTrainingContracts", package: "kuyu-training"),
         .product(name: "KuyuTrainingValidation", package: "kuyu-training"),
         .product(name: "ManasLearningContracts", package: "manas"),
+        .product(name: "ManasMojoOptimizer", package: "manas"),
+        .product(name: "Mojo", package: "swift-mojo"),
       ]
     ),
     .target(
@@ -132,9 +135,14 @@ let package = Package(
       name: "KuyuManasMojoAdapterTests",
       dependencies: [
         "KuyuManasMojoAdapter",
+        "KuyuMojoAcceleratorRuntime",
+        "KuyuMojoCore",
         .product(name: "KuyuTrainingContracts", package: "kuyu-training"),
         .product(name: "KuyuTrainingValidation", package: "kuyu-training"),
         .product(name: "ManasLearningContracts", package: "manas"),
+        .product(name: "ManasMojoOptimizer", package: "manas"),
+        .product(name: "Mojo", package: "swift-mojo"),
+        .product(name: "MojoRuntime", package: "swift-mojo"),
       ]
     ),
     .testTarget(

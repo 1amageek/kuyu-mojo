@@ -121,9 +121,15 @@ injected `ManasLearningInputEncoding`, enforces transition and complete Float
 scalar budgets, and returns an immutable validated `ManasOnPolicyTrajectory`.
 The exact verifier is owned by the adapter and cannot be replaced by a caller.
 The direct-coordinate encoder requires explicit contract digests and rejects
-lossy `Double`-to-`Float` conversion. This target imports neither MLX nor MAX,
-does not own dataset persistence or Manas model structure, and does not yet
-implement bundle compatibility, worker snapshots, or model-store gates.
+lossy `Double`-to-`Float` conversion. The same target provides
+`KuyuManasMojoAdamOptimizerSessionFactory`, which admits only a digest-verified
+accelerator bundle whose ordered operation set exactly matches Manas' public
+Adam ABI. Its transport owns the dynamic session and library, routes opaque
+Float32 payloads without interpreting them, and shuts down the session before
+the runtime. Manas continues to own payload validation, proposal identity,
+transactional commit/discard, and checkpoint semantics. This target imports
+neither MLX nor MAX and does not own dataset persistence, model structure,
+worker snapshots, or model-store gates.
 
 The numerical and failure gates are defined in `PARITY_CONTRACT.md`, with
 executed results in `RELIABILITY_EVIDENCE.md`. The

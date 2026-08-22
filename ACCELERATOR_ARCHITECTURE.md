@@ -124,6 +124,7 @@ not discovered through an uncontrolled system search path.
 | Compiled canonical plan | Kuyu Mojo compiler | Immutable worker snapshot | Program revision | Program digest and executor identity must match |
 | Device buffers | Worker session | Worker session | Bounded operation/session | Destroyed before context shutdown |
 | Host borrow | Swift call scope | Caller | Synchronous borrow | Pointer never escapes the generated ABI call |
+| Adam runtime transport | Kuyu verified-runtime adapter | One Manas optimizer session | Session lifetime | Exact ordered Manas ABI; session closes before dynamic runtime |
 | Result | Worker | Attempt artifact store | Durable attempt history | Published only after parity and artifact validation |
 
 ## Acceptance gates
