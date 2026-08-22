@@ -130,6 +130,8 @@ not discovered through an uncontrolled system search path.
 | Device buffers | Worker session | Worker session | Bounded operation/session | Destroyed before context shutdown |
 | Host borrow | Swift call scope | Caller | Synchronous borrow | Pointer never escapes the generated ABI call |
 | Adam runtime transport | Kuyu verified-runtime adapter | One Manas optimizer session | Session lifetime | Exact ordered Manas ABI; session closes before dynamic runtime |
+| Core inference transport | Kuyu verified-runtime adapter | One Manas Core model session | Session lifetime | Exact Core factory plus initialize/infer ABI; Manas owns payload and recurrent state |
+| Reflex inference transport | Kuyu verified-runtime adapter | One Manas Reflex model session | Session lifetime | Exact Reflex factory plus initialize/infer ABI; independent from Core cadence and state |
 | Result | Worker | Attempt artifact store | Durable attempt history | Published only after parity and artifact validation |
 
 ## Acceptance gates

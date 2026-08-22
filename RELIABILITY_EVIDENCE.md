@@ -1,5 +1,20 @@
 # Reliability evidence
 
+## 2026-08-23 backend-neutral Manas inference transport
+
+| Claim | Evidence | Result |
+|---|---|---|
+| Core and Reflex keep semantic ownership inside Manas while accepting an external accelerator session | `ManasMojoInferenceSessionTransport` exposes only typed initialize/infer operations, capabilities, and shutdown. `ManasMojoCoreModelSession` and `ManasMojoReflexModelSession` still materialize validated weights, encode payloads, decode and validate outputs, and own recurrent/decomposition semantics | The complete `ManasMojoRuntimeTests` target passed 23 tests with failure 0 at `/Users/1amageek/Library/Developer/Xcode/DerivedData/manas-cqxwgyvkqnujwkakahjhivwakwuf/Logs/Test/Test-manas-Package-2026.08.23_08-15-31-+0900.xcresult`, including real CPU/MLX differential inference and injected accelerator success/failure paths |
+| Kuyu admits only the exact Manas Core or Reflex callable ABI | Separate public factories require the corresponding Manas session-factory name and ordered initialize/infer operations before preflight; the loaded session repeats the ordered-operation check and requests only `.accelerator` with synchronous Float32 device memory | Cross-wired Core/Reflex requirements and session operation drift failed as typed errors; the complete `KuyuManasMojoAdapterTests` target passed 29 tests with failure 0 at `/Users/1amageek/Library/Developer/Xcode/DerivedData/kuyu-mojo-ermfutvxklhjkhfvlwksygiupozt/Logs/Test/Test-kuyu-mojo-Package-2026.08.23_08-16-15-+0900.xcresult` |
+| Dynamic ownership remains ordered and backend-neutral | One Kuyu transport owns one verified runtime plus one Core or Reflex session; initialization failure transfers cleanup to the Manas model session, and explicit shutdown closes the session before its runtime | The deterministic adapter fixture observed `session.shutdown` followed by `runtime.shutdown`; missing device memory closed before inference, and dynamic invocation failure remained a typed Manas transport error without CPU fallback |
+| Workspace boundaries and source-risk policy remain intact | Kuyu and unconscious boundary validators, verbose dangerous-code audit, incomplete-implementation scan, target-conditioned synchronization scan, and diff checks | Both validators passed; audit blocker 0 with 921 review findings, no new direct file decoding, child process, unsafe memory, target-conditioned synchronization, or incomplete implementation in this slice |
+
+This slice closes the Swift transport, capability, operation-identity, and
+ownership seam for Core and Reflex inference. It does not claim that a real
+accelerator inference kernel or runtime bundle exists, nor does it provide
+Apple or Jetson inference parity, latency, memory, thermal, or cancellation
+evidence.
+
 ## 2026-08-23 device-resident Manas Adam on Apple Metal
 
 | Claim | Evidence | Result |

@@ -89,6 +89,8 @@ let package = Package(
         .product(name: "KuyuTrainingContracts", package: "kuyu-training"),
         .product(name: "KuyuTrainingValidation", package: "kuyu-training"),
         .product(name: "ManasLearningContracts", package: "manas"),
+        .product(name: "ManasMojoModels", package: "manas"),
+        .product(name: "ManasMojoRuntime", package: "manas"),
         .product(name: "ManasMojoOptimizer", package: "manas"),
         .product(name: "Mojo", package: "swift-mojo"),
       ]
@@ -140,6 +142,8 @@ let package = Package(
         .product(name: "KuyuTrainingContracts", package: "kuyu-training"),
         .product(name: "KuyuTrainingValidation", package: "kuyu-training"),
         .product(name: "ManasLearningContracts", package: "manas"),
+        .product(name: "ManasMojoModels", package: "manas"),
+        .product(name: "ManasMojoRuntime", package: "manas"),
         .product(name: "ManasMojoOptimizer", package: "manas"),
         .product(name: "Mojo", package: "swift-mojo"),
         .product(name: "MojoRuntime", package: "swift-mojo"),

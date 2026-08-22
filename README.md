@@ -135,6 +135,17 @@ transactional commit/discard, and checkpoint semantics. This target imports
 neither MLX nor MAX and does not own dataset persistence, model structure,
 worker snapshots, or model-store gates.
 
+The same adapter now exposes separate Core and Reflex inference-session
+factories over Manas' public backend-neutral transport. Each factory admits
+only a digest-verified callable runtime whose factory name and ordered
+initialize/infer operations exactly match the corresponding Manas ABI, requests
+only the `.accelerator` device class, and transfers session ownership to the
+Manas model session. Manas still owns model materialization, payload validation,
+output decomposition, recurrent-state commit, and controller semantics. The
+Kuyu transport owns dynamic-library lifetime and closes the session before the
+runtime. This closes the Swift ownership and routing seam; real accelerator
+Core/Reflex kernels and hardware parity remain separate gates.
+
 The Manas-owned device implementation has now passed the first real optimizer
 accelerator gate. Verified Apple deployment bundle
 `daaaaaa311e3a61729ff11368f71c0b95fd0f97273c73069f9c81e03661df161`
