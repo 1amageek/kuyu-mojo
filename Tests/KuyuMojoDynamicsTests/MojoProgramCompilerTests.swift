@@ -135,23 +135,48 @@ struct MojoProgramCompilerTests {
     }
 
     @Test(.timeLimit(.minutes(1)))
-    func metalAcceptanceSourceIsDeterministicAndCanonical() throws {
+    func acceleratorAcceptanceSourceIsDeterministicAndCanonical() throws {
         let program = try ReferenceQuadrotorCanonicalProgram.make()
-        let first = try MojoMetalCanonicalAcceptanceSource.source()
-        let second = try MojoMetalCanonicalAcceptanceSource.source()
+        let metal = try MojoAcceleratorCanonicalAcceptanceSource.source(
+            for: .metal
+        )
+        let repeatedMetal = try MojoAcceleratorCanonicalAcceptanceSource.source(
+            for: .metal
+        )
+        let cuda = try MojoAcceleratorCanonicalAcceptanceSource.source(
+            for: .cuda
+        )
 
-        #expect(first == second)
+        #expect(metal == repeatedMetal)
         #expect(
-            first.contains(
+            metal.contains(
                 "canonical_program_digest=\(program.digest.rawValue)"
             )
         )
-        #expect(first.contains("canonical_graph_count=11"))
-        #expect(first.contains("canonical_metal_differential=ok"))
+        #expect(metal.contains("canonical_graph_count=11"))
+        #expect(metal.contains("canonical_accelerator_device=metal"))
+        #expect(cuda.contains("canonical_accelerator_device=cuda"))
         #expect(
-            first.components(separatedBy: "canonical_graph=").count - 1
+            cuda
+                == metal.replacingOccurrences(
+                    of: "canonical_accelerator_device=metal",
+                    with: "canonical_accelerator_device=cuda"
+                )
+        )
+        #expect(
+            metal.contains("canonical_accelerator_differential=ok")
+        )
+        #expect(cuda.contains("canonical_accelerator_differential=ok"))
+        #expect(
+            metal.components(separatedBy: "canonical_graph=").count - 1
                 == 11
         )
+        #expect(
+            throws: MojoAcceleratorCanonicalAcceptanceSource.GenerationError
+                .unsupportedDeviceClass(.cpu)
+        ) {
+            _ = try MojoAcceleratorCanonicalAcceptanceSource.source(for: .cpu)
+        }
     }
 
     @Test(.timeLimit(.minutes(1)))

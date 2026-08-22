@@ -181,9 +181,9 @@ struct MojoTrainingWorkerExecutableBundlePreflightTests {
     {
         try MojoAcceleratorWorkerBundleRequirement(
             bundleDigest:
-                "0159c5a65dc14324bcbb5c09b2208857feb242d431df79a420d578d6a8837303",
+                "2c6e4b91593af4db7fc939cfa4c72d1fa534eaf36cd6705f78f3b0c134040ae8",
             receiptDigest:
-                "5e3ea40d3236289a757e6d063cbe8a2f8bde406cb82537c8338610b81283a6ab",
+                "6d04ae4e8a0cdc9320316e417ac5a63e2d6d64ea8f02f872f9425de8b16687be",
             target: MojoRuntimeBundleTarget(
                 triple: "arm64-apple-macosx14.0",
                 cpu: "apple-m4",

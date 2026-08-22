@@ -4,14 +4,15 @@ import KuyuMojoCore
 import KuyuPhysics
 import simd
 
-package enum MojoMetalCanonicalAcceptanceSource {
-    private enum GenerationError: Error, Equatable {
+package enum MojoAcceleratorCanonicalAcceptanceSource {
+    package enum GenerationError: Error, Equatable {
         case compiledProgramStructureMismatch
         case missingForceTerm(CanonicalForceTermID)
         case missingOutput(graphID: String, outputID: String)
         case unrepresentableOutput(graphID: String, outputID: String)
         case missingAcceptanceScenario(graphID: String)
         case inconsistentInvocationLayout(graphID: String)
+        case unsupportedDeviceClass(MojoDeviceClass)
         case unsafeGraphIdentifier(String)
     }
 
@@ -40,19 +41,24 @@ package enum MojoMetalCanonicalAcceptanceSource {
         let tolerance: MojoParityTolerance
     }
 
-    package static func source() throws -> String {
+    package static func source(
+        for deviceClass: MojoDeviceClass
+    ) throws -> String {
+        guard deviceClass == .metal || deviceClass == .cuda else {
+            throw GenerationError.unsupportedDeviceClass(deviceClass)
+        }
         let program = try ReferenceQuadrotorCanonicalProgram.make()
         let cpuProgram = try KuyuMojoProgramCompiler(
             numericType: .float32,
             deviceClass: .cpu
         ).compile(program)
-        let metalProgram = try KuyuMojoProgramCompiler(
+        let acceleratorProgram = try KuyuMojoProgramCompiler(
             numericType: .float32,
-            deviceClass: .metal
+            deviceClass: deviceClass
         ).compile(program)
-        guard cpuProgram.forceTermIDs == metalProgram.forceTermIDs,
+        guard cpuProgram.forceTermIDs == acceleratorProgram.forceTermIDs,
             cpuProgram.identity.programDigest
-                == metalProgram.identity.programDigest
+                == acceleratorProgram.identity.programDigest
         else {
             throw GenerationError.compiledProgramStructureMismatch
         }
@@ -66,7 +72,7 @@ package enum MojoMetalCanonicalAcceptanceSource {
 
         for termID in cpuProgram.forceTermIDs {
             guard let cpuGraph = cpuProgram.forceTerms[termID],
-                let metalGraph = metalProgram.forceTerms[termID]
+                let acceleratorGraph = acceleratorProgram.forceTerms[termID]
             else {
                 throw GenerationError.missingForceTerm(termID)
             }
@@ -83,7 +89,7 @@ package enum MojoMetalCanonicalAcceptanceSource {
             expectations.append(
                 try expectation(
                     cpuGraph: cpuGraph,
-                    metalGraph: metalGraph,
+                    acceleratorGraph: acceleratorGraph,
                     inputs: inputs,
                     tolerance: parity.generalizedForce,
                     executor: executor
@@ -104,7 +110,7 @@ package enum MojoMetalCanonicalAcceptanceSource {
         expectations.append(
             try expectation(
                 cpuGraph: cpuProgram.derivative,
-                metalGraph: metalProgram.derivative,
+                acceleratorGraph: acceleratorProgram.derivative,
                 inputs: derivativeInputs,
                 tolerance: parity.derivative,
                 executor: executor
@@ -124,7 +130,7 @@ package enum MojoMetalCanonicalAcceptanceSource {
         expectations.append(
             try expectation(
                 cpuGraph: cpuProgram.observables,
-                metalGraph: metalProgram.observables,
+                acceleratorGraph: acceleratorProgram.observables,
                 inputs: observableInputs,
                 tolerance: parity.observables,
                 executor: executor
@@ -133,6 +139,7 @@ package enum MojoMetalCanonicalAcceptanceSource {
 
         return try render(
             programDigest: program.digest.rawValue,
+            deviceClass: deviceClass,
             expectations: expectations
         )
     }
@@ -246,34 +253,34 @@ package enum MojoMetalCanonicalAcceptanceSource {
 
     private static func expectation(
         cpuGraph: MojoCompiledGraph,
-        metalGraph: MojoCompiledGraph,
+        acceleratorGraph: MojoCompiledGraph,
         inputs: [[CanonicalValueID: MojoCanonicalValue]],
         tolerance: MojoParityTolerance,
         executor: MojoFloat32GraphExecutor
     ) throws -> GraphExpectation {
-        guard cpuGraph.graphID == metalGraph.graphID,
+        guard cpuGraph.graphID == acceleratorGraph.graphID,
             cpuGraph.workspaceElementCount
-                == metalGraph.workspaceElementCount,
-            cpuGraph.encodedPlan == metalGraph.encodedPlan,
-            cpuGraph.inputs == metalGraph.inputs,
-            cpuGraph.outputs == metalGraph.outputs
+                == acceleratorGraph.workspaceElementCount,
+            cpuGraph.encodedPlan == acceleratorGraph.encodedPlan,
+            cpuGraph.inputs == acceleratorGraph.inputs,
+            cpuGraph.outputs == acceleratorGraph.outputs
         else {
             throw GenerationError.compiledProgramStructureMismatch
         }
         guard let firstInputs = inputs.first else {
             throw GenerationError.missingAcceptanceScenario(
-                graphID: metalGraph.graphID
+                graphID: acceleratorGraph.graphID
             )
         }
         let firstInvocation = try MojoFloat32GraphInvocation(
-            graph: metalGraph,
+            graph: acceleratorGraph,
             inputs: firstInputs
         )
         var runtimeInputs: [Float] = []
         var outputBatches: [[OutputExpectation]] = []
         for batchInputs in inputs {
             let invocation = try MojoFloat32GraphInvocation(
-                graph: metalGraph,
+                graph: acceleratorGraph,
                 inputs: batchInputs
             )
             guard invocation.plan == firstInvocation.plan,
@@ -283,7 +290,7 @@ package enum MojoMetalCanonicalAcceptanceSource {
                     == firstInvocation.runtimeInput.count
             else {
                 throw GenerationError.inconsistentInvocationLayout(
-                    graphID: metalGraph.graphID
+                    graphID: acceleratorGraph.graphID
                 )
             }
             runtimeInputs.append(contentsOf: invocation.runtimeInput)
@@ -310,7 +317,7 @@ package enum MojoMetalCanonicalAcceptanceSource {
             outputBatches.append(expectations)
         }
         return GraphExpectation(
-            graphID: metalGraph.graphID,
+            graphID: acceleratorGraph.graphID,
             plan: firstInvocation.plan,
             runtimeInputs: runtimeInputs,
             workspaceElementCount: firstInvocation.workspaceElementCount,
@@ -322,6 +329,7 @@ package enum MojoMetalCanonicalAcceptanceSource {
 
     private static func render(
         programDigest: String,
+        deviceClass: MojoDeviceClass,
         expectations: [GraphExpectation]
     ) throws -> String {
         var source = """
@@ -354,7 +362,8 @@ package enum MojoMetalCanonicalAcceptanceSource {
         }
         source += "    print(\"canonical_program_digest=\(programDigest)\")\n"
         source += "    print(\"canonical_graph_count=\(expectations.count)\")\n"
-        source += "    print(\"canonical_metal_differential=ok\")\n"
+        source += "    print(\"canonical_accelerator_device=\(deviceClass.rawValue)\")\n"
+        source += "    print(\"canonical_accelerator_differential=ok\")\n"
         return source
     }
 

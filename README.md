@@ -38,11 +38,12 @@ isolated worker bundles, and a public read-only bundle verifier. KuyuMojoCore's
 `MojoAcceleratorWorkerBundlePreflighting` boundary accepts a worker executable
 only after the schema, bundle digest, receipt digest, target, managed tree,
 loader policy, and executable-relative path pass validation. It does not select
-CPU as a fallback. The canonical Metal object and its exact four-library
+CPU as a fallback. The backend-neutral generator's canonical Metal object and
+its exact four-library
 AsyncRT/KGEN closure reproducibly produce receipt
-`5e3ea40d3236289a757e6d063cbe8a2f8bde406cb82537c8338610b81283a6ab`
+`6d04ae4e8a0cdc9320316e417ac5a63e2d6d64ea8f02f872f9425de8b16687be`
 and bundle
-`0159c5a65dc14324bcbb5c09b2208857feb242d431df79a420d578d6a8837303`.
+`2c6e4b91593af4db7fc939cfa4c72d1fa534eaf36cd6705f78f3b0c134040ae8`.
 Both the original and relocated bundle pass fresh verification and execute all
 11 canonical graph checks under `env -i`.
 

@@ -21,8 +21,8 @@ let package = Package(
             targets: ["KuyuMojoTrainingRuntime"]
         ),
         .executable(
-            name: "kuyu-mojo-metal-acceptance-fixture",
-            targets: ["KuyuMojoMetalAcceptanceFixture"]
+            name: "kuyu-mojo-accelerator-acceptance-fixture",
+            targets: ["KuyuMojoAcceleratorAcceptanceFixture"]
         ),
     ],
     dependencies: [
@@ -80,8 +80,8 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "KuyuMojoMetalAcceptanceFixture",
-            dependencies: ["KuyuMojoDynamics"]
+            name: "KuyuMojoAcceleratorAcceptanceFixture",
+            dependencies: ["KuyuMojoCore", "KuyuMojoDynamics"]
         ),
         .testTarget(
             name: "KuyuMojoDynamicsTests",

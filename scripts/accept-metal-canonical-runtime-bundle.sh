@@ -52,13 +52,13 @@ derived_data="$working_directory/DerivedData"
 source_file="$working_directory/CanonicalMetalAcceptance.mojo"
 object_file="$working_directory/CanonicalMetalAcceptance.o"
 receipt_file="$working_directory/RuntimeReceipt.json"
-fixture_executable="$derived_data/Build/Products/Debug/kuyu-mojo-metal-acceptance-fixture"
+fixture_executable="$derived_data/Build/Products/Debug/kuyu-mojo-accelerator-acceptance-fixture"
 executable_name="kuyu-mojo-metal-canonical"
 
 env TOOLCHAINS=com.apple.dt.toolchain.XcodeDefault \
   python3 "$timeout_runner" --timeout 120 \
   xcodebuild build \
-  -scheme kuyu-mojo-metal-acceptance-fixture \
+  -scheme kuyu-mojo-accelerator-acceptance-fixture \
   -destination platform=macOS,arch=arm64 \
   -derivedDataPath "$derived_data" \
   -skipPackagePluginValidation \
@@ -68,7 +68,7 @@ if [[ ! -x "$fixture_executable" ]]; then
   echo "canonical acceptance fixture generator was not produced" >&2
   exit 70
 fi
-"$fixture_executable" "$source_file"
+"$fixture_executable" metal "$source_file"
 
 "$pixi_executable" run \
   --manifest-path "$max_project/pixi.toml" \
@@ -138,7 +138,8 @@ validate_worker_output() {
     "canonical_graph=reference_quadrotor_observables batches=2 ok"
     "canonical_program_digest=6c6773c5a824508fd683390aa7a4acdc1636e8c8483f6ac9ee9667bf62d54310"
     "canonical_graph_count=11"
-    "canonical_metal_differential=ok"
+    "canonical_accelerator_device=metal"
+    "canonical_accelerator_differential=ok"
   )
   for expected_line in "${expected_lines[@]}"; do
     if ! grep -Fqx "$expected_line" <<<"$worker_output"; then
