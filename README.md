@@ -80,12 +80,13 @@ offline device produces a failed receipt and no deploy; an OS mismatch is
 rejected before build or deployment.
 
 The pinned swift-mojo revision provides schema-1 accelerator runtime receipts,
-isolated worker bundles, and a public read-only bundle verifier. KuyuMojoCore's
-`MojoAcceleratorWorkerBundlePreflighting` boundary accepts a worker executable
-only after the schema, bundle digest, receipt digest, target, managed tree,
-loader policy, and executable-relative path pass validation. It does not select
-CPU as a fallback. The backend-neutral generator's canonical Metal object and
-its exact four-library
+isolated runtime bundles, and a public read-only bundle verifier. KuyuMojoCore's
+`MojoAcceleratorWorkerBundlePreflighting` boundary admits the contained runtime
+executable only after the schema, bundle digest, receipt digest, target, managed
+tree, loader policy, and executable-relative path pass validation. That
+executable is an accelerator evidence/backend resource, not the authenticated
+Kuyu training worker, and the verifier does not select CPU as a fallback. The
+backend-neutral generator's canonical Metal object and its exact four-library
 AsyncRT/KGEN closure reproducibly produce receipt
 `6d04ae4e8a0cdc9320316e417ac5a63e2d6d64ea8f02f872f9425de8b16687be`
 and bundle
@@ -93,13 +94,18 @@ and bundle
 Both the original and relocated bundle pass fresh verification and execute all
 11 canonical graph checks under `env -i`.
 
-`KuyuMojoTrainingRuntime` bridges that backend-owned verification into
-`KuyuTrainingRuntime`'s generic executable-bundle contract. It derives the
-generic executable source only from a verified manifest and rechecks that the
-requested root, executable-relative path, and resolved executable URL agree on
-both source and staged roots. The target does not expose the device-context
-probe as a training worker; executable worker-protocol support remains a
-separate acceptance gate.
+`KuyuMojoTrainingRuntime` composes that backend-owned verification with
+`KuyuTrainingRuntime`'s generic executable-bundle contract. A
+`MojoTrainingWorkerBundleLayout` keeps the real Kuyu worker executable outside
+the nested accelerator runtime. `MojoTrainingWorkerBundlePreflight` returns the
+outer Kuyu worker as the executable source while independently re-verifying the
+nested runtime on both source and attempt-owned staged roots. The generic
+stager hashes and makes the complete outer tree read-only. A process test places
+`/usr/bin/true` at the Kuyu worker path and `/usr/bin/false` at the accelerator
+evidence path; the generic launcher reaches the former and reports its zero exit
+before the expected missing-outcome failure. Production backend execution,
+device-session lifetime, progress, cancellation, and ordered shutdown remain
+separate acceptance gates.
 
 `KuyuManasMojoAdapter` is the sole typed conversion boundary from persisted
 KuyuDataset v7 artifacts to Manas-owned in-memory learning contracts. It uses

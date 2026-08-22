@@ -1,5 +1,21 @@
 # Reliability evidence
 
+## 2026-08-22 attempt worker and accelerator runtime separation
+
+| Claim | Evidence | Result |
+|---|---|---|
+| The accelerator evidence executable cannot be selected as the training worker | `MojoTrainingWorkerBundleLayout` requires separate non-overlapping worker and accelerator-runtime paths; `MojoTrainingWorkerBundlePreflight` rejects any generic preflight request whose executable path is not the declared Kuyu worker path | Path traversal, path overlap, non-file direct lookup, and accelerator-as-worker fixtures returned typed failures |
+| Source and staged attempts re-verify the same nested runtime | The Mojo preflight conforms to KuyuTraining's existing executable-bundle preflight while returning the outer worker source; the generic stager pins and makes the complete outer tree read-only before the same preflight inspects the staged nested runtime | Focused source/staged launcher coverage passed without adding Mojo knowledge to `KuyuTrainingRuntime` |
+| The generic launcher reaches the real worker path | The process fixture places `/usr/bin/true` at `bin/kuyu-worker` and `/usr/bin/false` at `AcceleratorRuntime/bin/kuyu-mojo-canonical`, then launches through `TrainingRunWorkerProcessLauncher` | The handle observed status 0 and the expected missing durable outcome; executing the nested evidence binary would have produced status 1 |
+| Focused worker-boundary behavior passes | `xcodebuild test -scheme kuyu-mojo-Package -only-testing:KuyuMojoTrainingRuntimeTests -destination 'platform=macOS,arch=arm64' -maximum-test-execution-time-allowance 60` | 10/10 passed, failure 0, skip 0, in `/tmp/kuyu-mojo-worker-boundary-focused-final/Logs/Test/Test-kuyu-mojo-Package-2026.08.22_19-05-11-+0900.xcresult` |
+| The accepted Metal closure survives the real attempt staging path | The same focused suite ran with `KUYU_MOJO_TEST_ACCELERATOR_BUNDLE=/tmp/kuyu-mojo-accelerator-canonical-bundle-v1`; `TrainingRunWorkerProcessLauncher` verified the source outer bundle, staged its complete real canonical runtime closure, re-verified the nested staged runtime, and launched the outer Kuyu worker path | 10/10 passed, failure 0, skip 0, in `/tmp/kuyu-mojo-worker-boundary-real-final/Logs/Test/Test-kuyu-mojo-Package-2026.08.22_19-21-18-+0900.xcresult` |
+| Existing Mojo behavior and the strict CPU performance floor remain intact | Full non-parallel `kuyu-mojo-Package` test with the real accelerator bundle and `KUYU_MOJO_STRICT_PERFORMANCE_BUDGETS=1` | 52 tests / 53 parameterized runs passed, failure 0, skip 0, in `/tmp/kuyu-mojo-worker-boundary-full/Logs/Test/Test-kuyu-mojo-Package-2026.08.22_19-07-56-+0900.xcresult` |
+
+This closes executable identity and staging composition only. It does not claim
+that the Kuyu worker has a Mojo optimizer backend, owns a production MAX device
+session, or has passed cancellation, shutdown, performance, or native Jetson
+gates.
+
 ## 2026-08-22 production Plant and IMU injection
 
 | Claim | Evidence | Result |
@@ -95,9 +111,9 @@ terminal marker inside the GPU-entitled container.
 | Repo-owned Metal hardware acceptance performs real compute | `HardwareAcceptance/MetalVectorAddProbe.mojo` launches a `metal:4` Float32 vector-add kernel, transfers two 257-element inputs and one output, synchronizes, and checks every output against the expected value | Passed on Apple M4 Max with `gpu_kernel_launch=ok`, `gpu_transfer=ok`, and `gpu_synchronization=ok` |
 | The Metal kernel runtime bundle is reproducible and relocatable | `scripts/accept-metal-vector-add-runtime-bundle.sh` compiled the repo-owned source twice, produced receipt `2bc7264e13acb31f1c0be774cac0b07d5e450d44d552dbfb669dead321b98f50` and bundle `643f18ba4b227ba253e64642fdbfa9de0508d0a85d691d099d0bf846d9bdbf97` both times, freshly verified the managed tree, and executed both original and relocated bundles with an empty environment | Passed; executable `bin/kuyu-mojo-metal-vector-add`, exact four-library MAX closure, target `arm64-apple-macosx14.0|apple-m4|metal:4` |
 | Kuyu rejects a runtime bundle whose declared identity changes | Seven focused preflight tests cover exact acceptance, schema/bundle/receipt/target mismatch, invalid requirements, runtime-verifier failure and cancellation preservation, non-file roots, and unsafe executable paths | Passed as typed failures with no fallback |
-| Kuyu's public preflight accepts the real relocated runtime bundle | Direct `xctest` with `KUYU_MOJO_TEST_ACCELERATOR_BUNDLE=/tmp/kuyu-runtime-bundle-real-v1` re-inspected the managed tree and returned the verified worker path | Passed in `0.67` seconds; four runtime libraries observed |
-| The Mojo verifier composes with Kuyu's generic source/staged executable contract | `KuyuMojoTrainingRuntime` tests reject root, relative-path, and resolved-executable disagreement; the opt-in real-bundle test derives the source contract, relocates the bundle, and verifies the relocated root through the same adapter | 5/5 passed at `/tmp/kuyu-mojo-training-runtime-real-bundle-1.xcresult` |
-| Kuyu independently admits the real Metal kernel bundle | `KuyuMojoCore` and `KuyuMojoTrainingRuntime` opt-in tests re-read bundle `643f18ba…`, match receipt `2bc7264e…` and `metal:4`, derive the generic executable source, and verify a relocated copy | 12/12 passed at `/tmp/kuyu-mojo-metal-bundle-preflight-1.xcresult` |
+| Kuyu's public preflight accepts the real relocated runtime bundle | Direct `xctest` with `KUYU_MOJO_TEST_ACCELERATOR_BUNDLE=/tmp/kuyu-runtime-bundle-real-v1` re-inspected the managed tree and returned the verified runtime executable path | Passed in `0.67` seconds; four runtime libraries observed |
+| The Mojo verifier composes with Kuyu's generic source/staged executable contract | The original adapter tests proved exact relocation but incorrectly exposed the runtime evidence executable as the generic worker source | Superseded by the 2026-08-22 outer-worker/nested-runtime contract above |
+| Kuyu independently admits the real Metal kernel bundle | Historical `KuyuMojoCore` and `KuyuMojoTrainingRuntime` opt-in tests re-read bundle `643f18ba…`, matched receipt `2bc7264e…` and `metal:4`, and verified a relocated copy; the former generic-worker-source projection is superseded by the outer-worker/nested-runtime contract above | 12/12 passed at `/tmp/kuyu-mojo-metal-bundle-preflight-1.xcresult` |
 | The new training-runtime adapter preserves package regression | Bounded `xcodebuild test` for the full package after adding `KuyuMojoTrainingRuntime` | 22/22 passed at `/tmp/kuyu-mojo-training-runtime-full-1.xcresult` |
 | Workspace boundaries and source-risk policy hold | `validate-kuyu-boundaries.sh`, `validate-unconscious-boundaries.sh`, and `audit-dangerous-code.sh --verbose` | Passed; zero audit blockers |
 

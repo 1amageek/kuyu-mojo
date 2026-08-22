@@ -90,7 +90,10 @@ let package = Package(
             name: "KuyuMojoTrainingRuntime",
             dependencies: [
                 "KuyuMojoCore",
-                .product(name: "KuyuTraining", package: "kuyu-training"),
+                .product(
+                    name: "KuyuTrainingRuntime",
+                    package: "kuyu-training"
+                ),
             ]
         ),
         .executableTarget(

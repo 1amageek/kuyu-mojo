@@ -19,7 +19,7 @@ distribution `26.5.0`, MAX `26.5.0`, and Mojo `1.0.0 (ed45d567)` on
 | The receipt can be linked and relocated without ambient runtime search | swift-mojo bundle `38075467012f877bb5ea23daf3d4639aa175b478bfaca898706bd33e1ff72e77` passed fresh tree, digest, Mach-O import, and `@executable_path/../lib` verification before minimal-environment execution created an Apple M4 Max context | macOS deployment identity is proven; Kuyu protocol, compute, cancellation, and native Jetson remain separate gates |
 | A Metal kernel bundle is reproducible and relocatable | The repo-owned acceptance source twice produced receipt `2bc7264e13acb31f1c0be774cac0b07d5e450d44d552dbfb669dead321b98f50` and bundle `643f18ba4b227ba253e64642fdbfa9de0508d0a85d691d099d0bf846d9bdbf97`; original and relocated `env -i` execution both passed kernel, transfer, synchronization, and 257-value correctness checks | Runtime packaging now covers real Metal execution, but not canonical dynamics, policy training, worker lifecycle, or performance qualification |
 | The canonical Metal bundle is reproducible and relocatable | The backend-neutral generator produced receipt `6d04ae4e8a0cdc9320316e417ac5a63e2d6d64ea8f02f872f9425de8b16687be` and bundle `2c6e4b91593af4db7fc939cfa4c72d1fa534eaf36cd6705f78f3b0c134040ae8`; original and relocated `env -i` executions each passed 11 graphs × 2 scenarios | Canonical graph execution, transfer, synchronization, runtime closure, and relocation are proven on Apple M4 Max; production worker lifecycle and training remain separate gates |
-| Kuyu can independently admit the bundle through a public read-only API | `MojoAcceleratorWorkerBundlePreflighting` re-verified the canonical bundle and matched schema, bundle digest, receipt digest, and target before returning `bin/kuyu-mojo-metal-canonical` | Source and staged snapshots can use the same fail-closed Kuyu preflight without importing swift-mojo internals |
+| Kuyu can independently admit the runtime bundle through a public read-only API | `MojoAcceleratorWorkerBundlePreflighting` re-verified the canonical bundle and matched schema, bundle digest, receipt digest, and target before returning `bin/kuyu-mojo-metal-canonical` as a runtime resource | An outer attempt worker bundle can re-verify the nested runtime on source and staged snapshots without importing swift-mojo internals into the generic launcher |
 | Jetson Orin is the official `sm_87` target | Mojo's supported-target query reports `sm_87 - Ampere embedded (Jetson Orin)` | Jetson builds fix host `aarch64-unknown-linux-gnu`, CPU `cortex-a78ae`, and accelerator `sm_87` |
 | Cross-compilation produces a real canonical AArch64 ELF object | The same generator's CUDA fixture emitted a 201,528-byte ELF64 AArch64 relocatable object with SHA-256 `ef696d6dbc8dfe42af2374e828e98b252d8d67471c3c158554e27a4622723b1b` | Canonical host architecture generation and CUDA evidence identity are proven, but native link and execution are not |
 | The CUDA handoff is reproducible, source-complete, and toolchain-bound | Two independent runs of `scripts/prepare-cuda-canonical-acceptance.sh` produced identical source `3467e04c…`, object `ef696d6d…`, imported module closure `8ddf1b9e…`, and evidence `97f7af7b…`; the object is compiled against the copied closure, and the evidence binds Mojo `1.0.0 (ed45d567)` plus pixi manifest `404c7d32…` and lock `3f61eabd…` | Jetson admission can reject changed source, object, module closure, canonical program, target, or toolchain before attempting native link/run |
@@ -35,18 +35,20 @@ not provide the required host runtime.
 ## Final execution boundary
 
 The application does not load MAX into the UI or command adapter process. Kuyu
-first validates the source bundle, the training runtime stages an immutable
-attempt-owned copy, and Kuyu validates that staged copy again immediately
-before launch. An attempt-owned worker links the generated swift-mojo ABI and
-the declared MAX runtime libraries, creates exactly one device context, and
-owns every device buffer until shutdown.
+first validates the outer source bundle and its nested runtime, the training
+runtime stages one immutable attempt-owned copy, and Kuyu validates both again
+immediately before launch. The executable path selects the Kuyu worker, never
+the nested acceptance/backend executable. The attempt-owned worker links the
+generated swift-mojo ABI and the declared MAX runtime libraries, creates exactly
+one device context, and owns every device buffer until shutdown.
 
 ```mermaid
 flowchart LR
-  Bundle["Digest-pinned runtime bundle"] --> Preflight["Kuyu read-only preflight"]
-  Preflight --> App["Kuyu runtime facade"]
-  App --> Protocol["Authenticated typed worker protocol"]
+  Outer["Immutable outer worker bundle"] --> Preflight["Kuyu source + staged preflight"]
+  Runtime["Nested digest-pinned Mojo runtime"] --> Preflight
+  Preflight --> Protocol["Authenticated typed worker protocol"]
   Protocol --> Worker["Attempt-owned Swift worker"]
+  Worker --> Runtime
   Worker --> Bridge["swift-mojo generated ABI"]
   Bridge --> MAX["MAX AsyncRT + KGEN"]
   MAX --> Device["Metal Float32 / CUDA Float32"]
