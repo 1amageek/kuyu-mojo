@@ -131,6 +131,16 @@ transactional commit/discard, and checkpoint semantics. This target imports
 neither MLX nor MAX and does not own dataset persistence, model structure,
 worker snapshots, or model-store gates.
 
+The Manas-owned device implementation has now passed the first real optimizer
+accelerator gate. Verified Metal bundle
+`f7c7621e81d26087a0282b728ec9cbfbc58736c5319ede98983e0a0d763cd129`
+was dynamically loaded through this adapter on Apple M4. One persistent Metal
+session matched the static CPU session after proposal discard and three
+proposal/commit cycles, including directions, metrics, parameters, both moment
+vectors, and update count. This proves semantic Metal execution for the Adam
+slice; it does not prove the complete Mojo RL backend, production cutover,
+sustained performance, or native Jetson CUDA execution.
+
 The numerical and failure gates are defined in `PARITY_CONTRACT.md`, with
 executed results in `RELIABILITY_EVIDENCE.md`. The
 runtime identity binds the canonical program schema and digest to the executor

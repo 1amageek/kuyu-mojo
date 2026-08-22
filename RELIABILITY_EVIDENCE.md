@@ -1,5 +1,18 @@
 # Reliability evidence
 
+## 2026-08-23 device-resident Manas Adam on Apple Metal
+
+| Claim | Evidence | Result |
+|---|---|---|
+| Adam committed state resides behind the accelerator session rather than a CPU fallback | Manas' backend-neutral accelerator source creates one real `DeviceContext`, retains parameter and moment buffers on device, uses separate pending proposal buffers, and validates candidate parameters on GPU before commit | Mojo 1.0.0 compiled schema-3 bundle `f7c7621e81d26087a0282b728ec9cbfbc58736c5319ede98983e0a0d763cd129` for `arm64-apple-macosx14.0|apple-m4|metal:4`; the verified session advertised device-memory capability 29 and `.metal` |
+| The dynamic Metal trajectory preserves CPU Adam semantics | `executesOptInRealMetalBundleWithCPUParity()` preflights the exact bundle identity, loads it through `KuyuManasMojoAdamOptimizerSessionFactory`, and advances it beside the static Manas CPU session | Proposal plus discard left both states unchanged; three committed steps matched descent directions, metrics, parameters, first moments, second moments, and update count |
+| Artifact drift and runtime failure remain fail closed | The test requirement fixes module, bundle, receipt, input-graph, target, factory, and all six ordered operation names; the Mojo session poisons itself on device/runtime exceptions instead of returning success | The complete adapter target passed 26 tests in 4 suites, including malformed identity, ABI mismatch, initialization cleanup, operation mismatch, and the real Metal path |
+| CPU behavior remains intact after sharing the Adam contract | The regenerated static CPU artifacts ran through the Manas optimizer suite after the common validation/math extraction | 20 tests in 4 suites passed, including MLX differential continuation, checkpoint resume, arithmetic rollback, concurrent serialization, and lifecycle failure |
+
+This is semantic acceptance of one Apple Metal optimizer slice. Latency,
+allocation, sustained memory, complete RR-PPO worker composition, and native
+Jetson CUDA remain separate gates.
+
 ## 2026-08-23 Manas Adam verified-runtime adapter
 
 | Claim | Evidence | Result |

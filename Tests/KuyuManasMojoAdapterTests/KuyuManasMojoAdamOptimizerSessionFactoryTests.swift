@@ -163,6 +163,119 @@ struct KuyuManasMojoAdamOptimizerSessionFactoryTests {
     #expect(fixture.observation.lifecycleEvents.isEmpty)
   }
 
+  @Test(.timeLimit(.minutes(1)))
+  func executesOptInRealMetalBundleWithCPUParity() throws {
+    guard
+      let bundlePath = ProcessInfo.processInfo.environment[
+        "KUYU_MOJO_TEST_ADAM_ACCELERATOR_LIBRARY_BUNDLE"
+      ]
+    else {
+      return
+    }
+    let configuration = try ManasAdamConfiguration(
+      learningRate: 0.0013,
+      beta1: 0.7,
+      beta2: 0.93,
+      epsilon: 1.0e-5
+    )
+    let layout = try ManasAdamParameterLayout(
+      entries: [
+        try ManasAdamParameterLayout.Entry(
+          name: "parameters",
+          shape: [4]
+        )
+      ]
+    )
+    let initialState = try ManasAdamState(
+      layout: layout,
+      parameters: [-0.1, 0.2, -0.3, 0.4]
+    )
+    let cpu = try ManasMojoAdamOptimizerSession(
+      configuration: configuration,
+      initialState: initialState
+    )
+    let metalFactory = try KuyuManasMojoAdamOptimizerSessionFactory(
+      bundleURL: URL(
+        fileURLWithPath: bundlePath,
+        isDirectory: true
+      ),
+      requirement: try Self.realMetalRequirement(),
+      sessionRequirements: MojoSessionRequirements(device: .metal)
+    )
+    let metal = try metalFactory.session(
+      configuration: configuration,
+      initialState: initialState
+    )
+    defer {
+      for session in [cpu as any ManasAdamOptimizerSession, metal] {
+        do {
+          try session.shutdown()
+        } catch {
+          Issue.record("Optimizer shutdown failed: \(error)")
+        }
+      }
+    }
+
+    let discardedGradients = try ManasAdamGradientVector(
+      layout: layout,
+      values: [0.75, -0.5, 0.25, -0.125]
+    )
+    let cpuDiscarded = try cpu.proposal(for: discardedGradients)
+    let metalDiscarded = try metal.proposal(for: discardedGradients)
+    Self.expectClose(
+      metalDiscarded.descentDirection.values,
+      cpuDiscarded.descentDirection.values
+    )
+    try cpu.discard(cpuDiscarded)
+    try metal.discard(metalDiscarded)
+    Self.expectEquivalent(
+      try metal.checkpoint(),
+      try cpu.checkpoint()
+    )
+
+    for values in [
+      [Float(0.5), -0.25, 0.125, -0.75],
+      [-0.2, 0.6, -0.1, 0.4],
+      [0.05, -0.15, 0.25, -0.35],
+    ] {
+      let gradients = try ManasAdamGradientVector(
+        layout: layout,
+        values: values
+      )
+      let cpuProposal = try cpu.proposal(for: gradients)
+      let metalProposal = try metal.proposal(for: gradients)
+      Self.expectClose(
+        metalProposal.descentDirection.values,
+        cpuProposal.descentDirection.values
+      )
+      let cpuMetrics = try cpu.commit(
+        cpuProposal,
+        descentDirection: cpuProposal.descentDirection
+      )
+      let metalMetrics = try metal.commit(
+        metalProposal,
+        descentDirection: metalProposal.descentDirection
+      )
+      #expect(metalMetrics.updateCount == cpuMetrics.updateCount)
+      #expect(
+        abs(
+          metalMetrics.maximumAbsoluteGradient
+            - cpuMetrics.maximumAbsoluteGradient
+        ) <= 1.0e-7
+      )
+      #expect(
+        abs(
+          metalMetrics.maximumAbsoluteStep
+            - cpuMetrics.maximumAbsoluteStep
+        ) <= 1.0e-7
+      )
+      Self.expectEquivalent(
+        try metal.checkpoint(),
+        try cpu.checkpoint()
+      )
+    }
+  }
+
   private static func initialState() throws -> ManasAdamState {
     let layout = try ManasAdamParameterLayout(
       entries: [
@@ -173,6 +286,59 @@ struct KuyuManasMojoAdamOptimizerSessionFactoryTests {
       ]
     )
     return try ManasAdamState(layout: layout, parameters: [0.25])
+  }
+
+  private static func realMetalRequirement() throws
+    -> MojoAcceleratorRuntimeBundleRequirement
+  {
+    try MojoAcceleratorRuntimeBundleRequirement(
+      bundleDigest:
+        "f7c7621e81d26087a0282b728ec9cbfbc58736c5319ede98983e0a0d763cd129",
+      receiptDigest:
+        "2048044e42f8355e959f1c81f7881b528c7fe4d7da6b13665dae66aa918b3834",
+      target: MojoRuntimeBundleTarget(
+        triple: "arm64-apple-macosx14.0",
+        cpu: "apple-m4",
+        accelerator: "metal:4"
+      ),
+      moduleName: "SwiftMojo_ManasMojoAdamAccelerator_ABI",
+      inputGraphDigest:
+        "d1f9e2c2bd13b1db4f3c218c664d0e1852a03c5fc4f5e03bf044b2d2c39f7e72",
+      inputGraphIdentifier: 5_907_001_712_296_833_499,
+      sessionFactoryFunctionName:
+        ManasMojoAdamABI.sessionFactoryFunctionName,
+      executionFunctionNames:
+        ManasMojoAdamABI.executionFunctionNames
+    )
+  }
+
+  private static func expectEquivalent(
+    _ actual: ManasAdamCheckpoint,
+    _ expected: ManasAdamCheckpoint
+  ) {
+    #expect(actual.configuration == expected.configuration)
+    #expect(actual.state.layout == expected.state.layout)
+    #expect(actual.state.updateCount == expected.state.updateCount)
+    Self.expectClose(actual.state.parameters, expected.state.parameters)
+    Self.expectClose(
+      actual.state.firstMoments,
+      expected.state.firstMoments
+    )
+    Self.expectClose(
+      actual.state.secondMoments,
+      expected.state.secondMoments
+    )
+  }
+
+  private static func expectClose(
+    _ actual: [Float],
+    _ expected: [Float],
+    tolerance: Float = 1.0e-6
+  ) {
+    #expect(actual.count == expected.count)
+    for (actualValue, expectedValue) in zip(actual, expected) {
+      #expect(abs(actualValue - expectedValue) <= tolerance)
+    }
   }
 }
 
