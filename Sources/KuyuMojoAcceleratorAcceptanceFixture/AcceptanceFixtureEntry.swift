@@ -18,7 +18,7 @@ struct KuyuMojoAcceleratorAcceptanceFixtureTool {
         }
         let rawDeviceClass = arguments[1]
         guard let deviceClass = MojoDeviceClass(rawValue: rawDeviceClass),
-            deviceClass == .metal || deviceClass == .cuda
+            deviceClass == .accelerator
         else {
             throw ToolError.unsupportedDeviceClass(rawDeviceClass)
         }

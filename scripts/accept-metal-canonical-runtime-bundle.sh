@@ -68,7 +68,7 @@ if [[ ! -x "$fixture_executable" ]]; then
   echo "canonical acceptance fixture generator was not produced" >&2
   exit 70
 fi
-"$fixture_executable" metal "$source_file"
+"$fixture_executable" accelerator "$source_file"
 
 "$pixi_executable" run \
   --manifest-path "$max_project/pixi.toml" \
@@ -138,7 +138,7 @@ validate_worker_output() {
     "canonical_graph=reference_quadrotor_observables batches=2 ok"
     "canonical_program_digest=6c6773c5a824508fd683390aa7a4acdc1636e8c8483f6ac9ee9667bf62d54310"
     "canonical_graph_count=11"
-    "canonical_accelerator_device=metal"
+    "canonical_accelerator_device=accelerator"
     "canonical_accelerator_differential=ok"
   )
   for expected_line in "${expected_lines[@]}"; do

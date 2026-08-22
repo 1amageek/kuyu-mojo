@@ -44,7 +44,7 @@ package enum MojoAcceleratorCanonicalAcceptanceSource {
     package static func source(
         for deviceClass: MojoDeviceClass
     ) throws -> String {
-        guard deviceClass == .metal || deviceClass == .cuda else {
+        guard deviceClass == .accelerator else {
             throw GenerationError.unsupportedDeviceClass(deviceClass)
         }
         let program = try ReferenceQuadrotorCanonicalProgram.make()

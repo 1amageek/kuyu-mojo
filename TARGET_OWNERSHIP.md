@@ -2,7 +2,7 @@
 
 | Target | Owns | Must not own |
 |---|---|---|
-| `KuyuMojoCore` | Backend execution identity, numeric type, and device class | Physics equations, scenarios, training plans, fallback policy |
+| `KuyuMojoCore` | Execution identity, numeric type, and CPU/accelerator class | Vendor backend selection, physics equations, scenarios, training plans, fallback policy |
 | `KuyuMojoDynamics` | Canonical-program compilation and deterministic Mojo CPU Float64/Float32 execution | Canonical equation definition, scenario selection, reward/failure semantics |
 
 `KuyuPhysics` remains the sole authority for opcodes, layouts, units,

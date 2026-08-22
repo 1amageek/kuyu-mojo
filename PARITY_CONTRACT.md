@@ -2,8 +2,8 @@
 
 KuyuPhysics is the semantic reference. The Mojo CPU Float64 executor consumes
 the same digest-bound canonical program as the Float32 executor. Float64 is the
-semantic verifier; Float32 is the declared precision rung consumed by future
-Metal and CUDA executors. Each is accepted only when every declared comparison
+semantic verifier; Float32 is the declared precision rung consumed by Mojo
+accelerator artifacts. Each is accepted only when every declared comparison
 below passes. A time or fixture limit is not convergence.
 
 ```text

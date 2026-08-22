@@ -1,6 +1,6 @@
 {
   "abiVersion" : 1,
-  "artifactDigest" : "2e4d8f9e49de4a2b09ccd17632b9ceb25ce0ccffb7e0c20a5e86defb09edf326",
+  "artifactDigest" : "cc66ce5fb97e5c751f4866822b0c176085ebdd6a2fbe76d470a23df6eb1d32fa",
   "artifactIdentity" : {
     "artifactName" : "SwiftMojo_KuyuMojoDynamics_ABI.xcframework",
     "libraryName" : "libSwiftMojo_KuyuMojoDynamics_ABI.a",
@@ -11,12 +11,12 @@
   "artifacts" : [
     {
       "adapter" : "appleXCFramework",
-      "digest" : "9cc3a146900760e613fe1b528bfa3fd90cea693e2a25cc25924b3a8e8a42a1e0",
+      "digest" : "5ad7e89690535655f83256747d8f3eda8fc639377ac603801db95f55a18b1989",
       "name" : "SwiftMojo_KuyuMojoDynamics_ABI.xcframework"
     },
     {
       "adapter" : "linuxStaticLibraryBundle",
-      "digest" : "bd241dbcf62a39245634c04a3ae1bd8b3333b579378dcc43be3c74d7a047d7ce",
+      "digest" : "175dcbf48badcf54f138f0873cd7499211af823ca09e1c7b3e60762de8664f65",
       "name" : "SwiftMojo_KuyuMojoDynamics_ABI.artifactbundle"
     }
   ],
@@ -37,18 +37,18 @@
   "compilerVersion" : "Mojo 1.0.0 (ed45d567)",
   "externalPackages" : [
     {
-      "digest" : "8b71d52cd201606b4d7a32a8c600e489500dadb3bf9b8b1a404994d466ea4ea4",
+      "digest" : "54469c8743578f68b23c350909f1490d19f7b6c838af64a75c530d7bc61d4ac9",
       "name" : "KuyuCanonicalDynamics"
     }
   ],
-  "generatedSourceDigest" : "66ca011ee5ed1ba68a725c7f4ee29cf7d5048757c4cf5d2e7a1604f94e53b1c9",
+  "generatedSourceDigest" : "4b4adf77f74a93da76b3352b6237c9eb9d635749c9c47008d0bc1e1bde4eeb63",
   "generationPipelineDigest" : "df46475810771d98fee930414cdff3dc1ef0c32803b16c7c57e85d7e68fd2426",
-  "inputGraphDigest" : "94f47592aa548f600e1c92d698592fadabd73a9c4a6d68da1687377c7df59d9f",
-  "inputGraphIdentifier" : 1509961047859302240,
+  "inputGraphDigest" : "7401e30dd0ed46f0321fb376a4d0f7f285614784295f2425466316cd9b11a2f3",
+  "inputGraphIdentifier" : 8359212031855642352,
   "schemaVersion" : 5,
   "slices" : [
     {
-      "archiveDigest" : "e8c07c0919b5d675fef0c57f14edd1409118cbf13759bf3db8aa73e706149cba",
+      "archiveDigest" : "1de84077cfec0ad1a241e07835f7ffa210bb546a1aa3c759a859e5061bc10e6b",
       "libraryIdentifier" : "linux-234e17a28cd31bbdd7861545e26b882a5e96f4b155fa3922926bac590e206378",
       "target" : {
         "cpu" : "generic",
@@ -56,7 +56,7 @@
       }
     },
     {
-      "archiveDigest" : "5d12a437c872c445bb7996a88ffff3c71e67f71f0f9026e65e49e25a29e61c20",
+      "archiveDigest" : "bda4e582aaf5b85b639310486f5fb323b1d387a48abed74e4cc757a5c7cd6641",
       "libraryIdentifier" : "macos-arm64",
       "target" : {
         "cpu" : "generic",
@@ -66,5 +66,5 @@
   ],
   "sourceGraphDigest" : "2551736f04d7906366f002fe4447159d7a439e5687053b252962a5c0d8d1ff5a",
   "sourceGraphIdentifier" : 2689057373176696931,
-  "sourceMapDigest" : "d2153b61dccbe75b1830259d8f06eefc831ccf7a29cf99c4a756490c349d0d57"
+  "sourceMapDigest" : "b3865e05d80a34fa4a0c551b81a09820c7d65bc4866d2c278fb2fb006fcda53a"
 }

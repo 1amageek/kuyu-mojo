@@ -23,7 +23,7 @@ struct KuyuManasMojoAdamOptimizerSessionFactoryTests {
     #expect(
       fixture.observation.sessionRequirements
         == ManasMojoAdamOptimizerSession.sessionRequirements(
-          device: .metal
+          device: .accelerator
         )
     )
     #expect(
@@ -133,16 +133,8 @@ struct KuyuManasMojoAdamOptimizerSessionFactoryTests {
   }
 
   @Test(.timeLimit(.minutes(1)))
-  func rejectsCPUAndMismatchedABIAtFactoryConstruction() throws {
+  func rejectsMismatchedABIAtFactoryConstruction() throws {
     let fixture = try AdamAdapterFixture()
-    #expect(
-      throws:
-        KuyuManasMojoAdamOptimizerSessionFactoryError
-        .unsupportedDevice(.cpu)
-    ) {
-      _ = try fixture.factory(device: .cpu)
-    }
-
     let mismatchedRequirement = try fixture.requirement(
       executionFunctionNames: ["unexpectedOperation"]
     )
@@ -199,8 +191,7 @@ struct KuyuManasMojoAdamOptimizerSessionFactoryTests {
         fileURLWithPath: bundlePath,
         isDirectory: true
       ),
-      requirement: try Self.realMetalRequirement(),
-      sessionRequirements: MojoSessionRequirements(device: .metal)
+      requirement: try Self.realMetalRequirement()
     )
     let metal = try metalFactory.session(
       configuration: configuration,
@@ -293,9 +284,9 @@ struct KuyuManasMojoAdamOptimizerSessionFactoryTests {
   {
     try MojoAcceleratorRuntimeBundleRequirement(
       bundleDigest:
-        "f7c7621e81d26087a0282b728ec9cbfbc58736c5319ede98983e0a0d763cd129",
+        "daaaaaa311e3a61729ff11368f71c0b95fd0f97273c73069f9c81e03661df161",
       receiptDigest:
-        "2048044e42f8355e959f1c81f7881b528c7fe4d7da6b13665dae66aa918b3834",
+        "bae966a967f03da812abba0e0c081118978d831697fcb62e9a9db9084c6ba1f0",
       target: MojoRuntimeBundleTarget(
         triple: "arm64-apple-macosx14.0",
         cpu: "apple-m4",
@@ -303,8 +294,8 @@ struct KuyuManasMojoAdamOptimizerSessionFactoryTests {
       ),
       moduleName: "SwiftMojo_ManasMojoAdamAccelerator_ABI",
       inputGraphDigest:
-        "d1f9e2c2bd13b1db4f3c218c664d0e1852a03c5fc4f5e03bf044b2d2c39f7e72",
-      inputGraphIdentifier: 5_907_001_712_296_833_499,
+        "e5c98830809ab66bcfb278362f375c3e2be95d4e81b9a424951f1715fb83b4ba",
+      inputGraphIdentifier: 7_334_543_210_046_994_027,
       sessionFactoryFunctionName:
         ManasMojoAdamABI.sessionFactoryFunctionName,
       executionFunctionNames:
@@ -370,13 +361,11 @@ private struct AdamAdapterFixture {
   }
 
   func factory(
-    requirement: MojoAcceleratorRuntimeBundleRequirement? = nil,
-    device: MojoDeviceKind = .metal
+    requirement: MojoAcceleratorRuntimeBundleRequirement? = nil
   ) throws -> KuyuManasMojoAdamOptimizerSessionFactory {
     try KuyuManasMojoAdamOptimizerSessionFactory(
       bundleURL: rootURL,
       requirement: try requirement ?? self.requirement(),
-      sessionRequirements: MojoSessionRequirements(device: device),
       preflight: StubAdamBundlePreflight(
         bundle: bundle,
         observation: observation
@@ -574,7 +563,7 @@ private final class StubAdamAcceleratorSession:
   }
 
   let capabilities = MojoSessionCapabilities(
-    device: .metal,
+    device: .accelerator,
     ordinal: 0,
     availableCapabilities: [
       .synchronousInvocation,

@@ -13,16 +13,16 @@ EXPECTED_CANONICAL_PROGRAM_DIGEST = (
     "6c6773c5a824508fd683390aa7a4acdc1636e8c8483f6ac9ee9667bf62d54310"
 )
 EXPECTED_EVIDENCE_SHA256 = (
-    "97f7af7bce2edfb409b7ea8a9b9afad7bb2e2d5b2fcbb624444cba1bf52ac64c"
+    "2e1301afbaafd9c642a929058614d87e17d21ff633bce28d2a5fcf5e68ca008f"
 )
 EXPECTED_MODULE_CLOSURE_SHA256 = (
-    "8ddf1b9ec3b446c50452ad5c0213415db9025cf7361853eb9754819497a71164"
+    "bec3fe7eb6981380c9b2c09294b49c2e46f8d2394b539ea3e1044da1314d24a1"
 )
 EXPECTED_OBJECT_SHA256 = (
-    "ef696d6dbc8dfe42af2374e828e98b252d8d67471c3c158554e27a4622723b1b"
+    "d1751032ed6b08cfd318f1145c2eb36429b43ad72a747897b9d515d84c357253"
 )
 EXPECTED_SOURCE_SHA256 = (
-    "3467e04cd3b032d750de6825c8e0242d4f276ce78eb3b2dbb5960c170a635433"
+    "5e482da97b0d56c1077e0021c53f23ea7a325fc5d5c95c2ab3b6c75a96e70893"
 )
 EXPECTED_MOJO_VERSION = "Mojo 1.0.0 (ed45d567)"
 EXPECTED_GRAPHS = (
@@ -226,7 +226,7 @@ def validate_runtime_output(path: pathlib.Path) -> None:
     required_lines = (
         f"canonical_program_digest={EXPECTED_CANONICAL_PROGRAM_DIGEST}",
         "canonical_graph_count=11",
-        "canonical_accelerator_device=cuda",
+        "canonical_accelerator_device=accelerator",
         "canonical_accelerator_differential=ok",
     )
     for required_line in required_lines:

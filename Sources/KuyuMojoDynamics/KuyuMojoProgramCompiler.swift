@@ -252,9 +252,9 @@ public struct KuyuMojoProgramCompiler: MojoDynamicsProgramCompiling, Sendable {
             return Self.float32ExecutorVersion
         case (.cpu, .float64):
             return Self.float64ExecutorVersion
-        case (.metal, .float32), (.cuda, .float32):
+        case (.accelerator, .float32):
             return Self.acceleratorFloat32ExecutorVersion
-        case (.metal, .float64), (.cuda, .float64):
+        case (.accelerator, .float64):
             throw MojoProgramCompilationError.unsupportedNumericType(
                 deviceClass: deviceClass,
                 numericType: numericType

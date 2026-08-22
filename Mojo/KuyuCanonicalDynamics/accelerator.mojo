@@ -285,7 +285,7 @@ def create_accelerator_session(
     comptime assert has_accelerator(), "A supported accelerator is required"
     if (
         request_schema != 1
-        or (requested_device != 1 and requested_device != 2)
+        or requested_device != 1
         or requested_ordinal != 0
     ):
         return 10
@@ -295,13 +295,6 @@ def create_accelerator_session(
 
     try:
         var created = AcceleratorSession()
-        var api = created.context.api()
-        if (
-            (requested_device == 1 and api != "metal")
-            or (requested_device == 2 and api != "cuda")
-        ):
-            return 13
-
         # AcceleratorSession is the sole owner of this allocation. The
         # generated Swift owner calls shutdown exactly once after all
         # synchronous borrows end. Shutdown deinitializes the DeviceContext

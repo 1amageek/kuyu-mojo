@@ -11,8 +11,8 @@ CanonicalDynamicsProgram
             -> Mojo Float64 / Float32 CPU execution
             -> Float32 plan + batched runtime inputs
                 -> backend-neutral accelerator acceptance source
-                    -> schema-3 Metal session library (native accepted)
-                    -> CUDA AArch64 handoff (cross-compiled)
+                    -> Apple target artifact (native accepted)
+                    -> Jetson target handoff (cross-compiled)
 ```
 
 The current runtime-verified slices include deterministic macOS CPU Float64 and
@@ -22,7 +22,9 @@ the explicit precision boundary required by Apple Metal and NVIDIA CUDA. The
 backend-neutral acceptance generator compiles the reference program once for
 CPU and accelerator identities, proves that all graph plans and bindings are
 identical, and then compares all outputs of nine force graphs, the derivative
-graph, and the observable graph for two scenarios. One GPU thread owns each
+graph, and the observable graph for two scenarios. Kuyu passes only the
+`accelerator` class; the prepared Mojo artifact owns Metal, CUDA, or another
+concrete target identity. One GPU thread owns each
 graph instance; plan and runtime input storage are transferred separately, and
 host-visible results are read only after explicit synchronization.
 
@@ -124,7 +126,9 @@ The direct-coordinate encoder requires explicit contract digests and rejects
 lossy `Double`-to-`Float` conversion. The same target provides
 `KuyuManasMojoAdamOptimizerSessionFactory`, which admits only a digest-verified
 accelerator bundle whose ordered operation set exactly matches Manas' public
-Adam ABI. Its transport owns the dynamic session and library, routes opaque
+Adam ABI. It always requests the backend-neutral `.accelerator` device class;
+the verified artifact carries the concrete deployment target. Its transport
+owns the dynamic session and library, routes opaque
 Float32 payloads without interpreting them, and shuts down the session before
 the runtime. Manas continues to own payload validation, proposal identity,
 transactional commit/discard, and checkpoint semantics. This target imports
@@ -132,14 +136,14 @@ neither MLX nor MAX and does not own dataset persistence, model structure,
 worker snapshots, or model-store gates.
 
 The Manas-owned device implementation has now passed the first real optimizer
-accelerator gate. Verified Metal bundle
-`f7c7621e81d26087a0282b728ec9cbfbc58736c5319ede98983e0a0d763cd129`
-was dynamically loaded through this adapter on Apple M4. One persistent Metal
+accelerator gate. Verified Apple deployment bundle
+`daaaaaa311e3a61729ff11368f71c0b95fd0f97273c73069f9c81e03661df161`
+was dynamically loaded through this adapter on Apple M4. One persistent Mojo
 session matched the static CPU session after proposal discard and three
 proposal/commit cycles, including directions, metrics, parameters, both moment
-vectors, and update count. This proves semantic Metal execution for the Adam
-slice; it does not prove the complete Mojo RL backend, production cutover,
-sustained performance, or native Jetson CUDA execution.
+vectors, and update count. This proves semantic accelerator execution on the
+Apple deployment for the Adam slice; it does not prove the complete Mojo RL
+backend, production cutover, sustained performance, or native Jetson execution.
 
 The numerical and failure gates are defined in `PARITY_CONTRACT.md`, with
 executed results in `RELIABILITY_EVIDENCE.md`. The

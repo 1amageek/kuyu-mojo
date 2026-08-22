@@ -86,7 +86,7 @@ if [[ ! -x "$fixture_executable" ]]; then
   exit 70
 fi
 LLVM_PROFILE_FILE="$working_directory/default.profraw" \
-  "$fixture_executable" cuda "$source_file"
+  "$fixture_executable" accelerator "$source_file"
 
 "$pixi_executable" run \
   --manifest-path "$pixi_manifest" \
@@ -122,7 +122,7 @@ object_strings="$(strings "$object_file")"
 for expected_marker in \
   "canonical_program_digest=6c6773c5a824508fd683390aa7a4acdc1636e8c8483f6ac9ee9667bf62d54310" \
   "canonical_graph_count=11" \
-  "canonical_accelerator_device=cuda" \
+  "canonical_accelerator_device=accelerator" \
   "canonical_accelerator_differential=ok"
 do
   if ! grep -Fqx "$expected_marker" <<<"$object_strings"; then

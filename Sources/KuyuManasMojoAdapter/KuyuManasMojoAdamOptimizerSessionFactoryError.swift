@@ -1,6 +1,5 @@
 import KuyuMojoAcceleratorRuntime
 import KuyuMojoCore
-import Mojo
 
 public enum KuyuManasMojoAdamOptimizerSessionFactoryError:
   Error, Sendable, Equatable
@@ -12,7 +11,6 @@ public enum KuyuManasMojoAdamOptimizerSessionFactoryError:
     case operationValidation
   }
 
-  case unsupportedDevice(MojoDeviceKind)
   case abiMismatch(
     expectedFactory: String,
     actualFactory: String,

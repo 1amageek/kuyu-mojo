@@ -40,7 +40,7 @@ let package = Package(
     .package(path: "../manas"),
     .package(
       url: "https://github.com/1amageek/swift-mojo.git",
-      revision: "dcbbac6fe64043a59a3d847f02b25321604ae7bb"
+      revision: "d5f58340bdb6c69152a4ad8710dd8c5266b14e90"
     ),
   ],
   targets: [

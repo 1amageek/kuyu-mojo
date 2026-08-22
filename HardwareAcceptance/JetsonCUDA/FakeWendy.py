@@ -64,7 +64,7 @@ def run_acceptance(mode: str) -> int:
     for graph in EXPECTED_GRAPHS:
         print(f"canonical_graph={graph} batches=2 ok")
     print("canonical_graph_count=11")
-    print("canonical_accelerator_device=cuda")
+    print("canonical_accelerator_device=accelerator")
     print("canonical_accelerator_differential=ok")
     print("native_host_architecture=aarch64")
     print("native_device_model=NVIDIA Jetson AGX Orin test fixture")

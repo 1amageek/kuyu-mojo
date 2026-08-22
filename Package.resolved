@@ -1,5 +1,5 @@
 {
-  "originHash" : "d55c4061edbffa0b657a6363c9c03c743f188a0b38d784d9cab05da7fd2d2fb1",
+  "originHash" : "036e4d48b2d69bed1cd310f60541d30e4369e0fc96a9e2ee351e26eee62484cb",
   "pins" : [
     {
       "identity" : "mlx-swift",
@@ -60,7 +60,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/1amageek/swift-mojo.git",
       "state" : {
-        "revision" : "dcbbac6fe64043a59a3d847f02b25321604ae7bb"
+        "revision" : "d5f58340bdb6c69152a4ad8710dd8c5266b14e90"
       }
     },
     {

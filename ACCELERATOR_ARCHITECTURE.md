@@ -1,6 +1,11 @@
 # Accelerator architecture
 
-Status: implementation contract for the Metal and CUDA migration.
+Status: implementation contract for backend-neutral Mojo acceleration.
+
+Kuyu and Manas expose only `cpu` and `accelerator`. Metal, CUDA, architecture,
+and accelerator-family names belong to the immutable artifact identity and its
+deployment acceptance tooling. They are not runtime choices in physics,
+learning, or session APIs.
 
 ## Confirmed facts
 
@@ -18,12 +23,12 @@ distribution `26.5.0`, MAX `26.5.0`, and Mojo `1.0.0 (ed45d567)` on
 | The MAX dependency closure can be reproduced exactly | swift-mojo schema-1 receipt `050ceac20bc593aed6e36757c050e01a0f0ec7d002bcebb49f3675d77ba4e179` re-inspected the object and four AsyncRT/KGEN libraries | Worker packaging consumes the verified receipt rather than ambient runtime search paths |
 | The receipt can be linked and relocated without ambient runtime search | swift-mojo bundle `38075467012f877bb5ea23daf3d4639aa175b478bfaca898706bd33e1ff72e77` passed fresh tree, digest, Mach-O import, and `@executable_path/../lib` verification before minimal-environment execution created an Apple M4 Max context | macOS deployment identity is proven; Kuyu protocol, compute, cancellation, and native Jetson remain separate gates |
 | A Metal kernel bundle is reproducible and relocatable | The repo-owned acceptance source twice produced receipt `2bc7264e13acb31f1c0be774cac0b07d5e450d44d552dbfb669dead321b98f50` and bundle `643f18ba4b227ba253e64642fdbfa9de0508d0a85d691d099d0bf846d9bdbf97`; original and relocated `env -i` execution both passed kernel, transfer, synchronization, and 257-value correctness checks | Runtime packaging now covers real Metal execution, but not canonical dynamics, policy training, worker lifecycle, or performance qualification |
-| The canonical Metal bundle is reproducible and relocatable | The backend-neutral generator produced receipt `6d04ae4e8a0cdc9320316e417ac5a63e2d6d64ea8f02f872f9425de8b16687be` and bundle `2c6e4b91593af4db7fc939cfa4c72d1fa534eaf36cd6705f78f3b0c134040ae8`; original and relocated `env -i` executions each passed 11 graphs × 2 scenarios | Canonical graph execution, transfer, synchronization, runtime closure, and relocation are proven on Apple M4 Max; production worker lifecycle and training remain separate gates |
+| The canonical Apple accelerator bundle is reproducible and relocatable | The backend-neutral generator produced receipt `c0b15f5d1628d1eec444d513de876028c7e940ddae15af209bc08d577e2cbb6c` and bundle `4337e0ba9aff535f07db67908b929aff403c6f11022738e8d5f3d78c1e072636` twice; original and relocated `env -i` executions each passed 11 graphs × 2 scenarios and reported only `accelerator` to Kuyu | Canonical graph execution, transfer, synchronization, runtime closure, and relocation are proven on Apple M4 Max; the concrete `metal:4` target remains artifact metadata, while production worker lifecycle and training remain separate gates |
 | A generated callable Metal library has a persistent session ABI | swift-mojo schema-3 bundle `2e89bda4bc15fb935f5df9cb1a43f029336653ef095bea62d60076dbb3d84f99` and receipt `3969ad6b6d12dd2416aa745bdc4037ad2faba85bd24b34d0abd3d5eb1c8be747` bind the module, input graph, generated header, runtime closure, factory, and borrowed-buffer execution function; a minimal-environment C probe and the Swift loader both reused one Apple M4 Metal session | Production admission and invocation no longer depend on the schema-1 acceptance executable; session/device-buffer lifetime is explicit and reusable |
 | Kuyu can independently admit the callable runtime through a public read-only API | `MojoAcceleratorRuntimeBundlePreflighting` re-verifies the schema-3 bundle and matches schema, bundle/receipt/graph identities, target, module, and every typed factory/execution relationship before returning the verified dylib and ordered bindings | An outer attempt worker bundle can re-verify the nested runtime on source and staged snapshots without importing swift-mojo internals into the generic launcher |
 | Jetson Orin is the official `sm_87` target | Mojo's supported-target query reports `sm_87 - Ampere embedded (Jetson Orin)` | Jetson builds fix host `aarch64-unknown-linux-gnu`, CPU `cortex-a78ae`, and accelerator `sm_87` |
-| Cross-compilation produces a real canonical AArch64 ELF object | The same generator's CUDA fixture emitted a 201,528-byte ELF64 AArch64 relocatable object with SHA-256 `ef696d6dbc8dfe42af2374e828e98b252d8d67471c3c158554e27a4622723b1b` | Canonical host architecture generation and CUDA evidence identity are proven, but native link and execution are not |
-| The CUDA handoff is reproducible, source-complete, and toolchain-bound | Two independent runs of `scripts/prepare-cuda-canonical-acceptance.sh` produced identical source `3467e04c…`, object `ef696d6d…`, imported module closure `8ddf1b9e…`, and evidence `97f7af7b…`; the object is compiled against the copied closure, and the evidence binds Mojo `1.0.0 (ed45d567)` plus pixi manifest `404c7d32…` and lock `3f61eabd…` | Jetson admission can reject changed source, object, module closure, canonical program, target, or toolchain before attempting native link/run |
+| Cross-compilation produces a real canonical AArch64 ELF object | The backend-neutral accelerator fixture emitted a 201,528-byte ELF64 AArch64 relocatable object with SHA-256 `d1751032ed6b08cfd318f1145c2eb36429b43ad72a747897b9d515d84c357253` | Canonical host architecture generation and Jetson artifact identity are proven, but native link and execution are not |
+| The Jetson handoff is reproducible, source-complete, and toolchain-bound | Two independent runs of `scripts/prepare-cuda-canonical-acceptance.sh` produced identical source `5e482da9…`, object `d1751032…`, imported module closure `bec3fe7e…`, and evidence `2e1301af…`; the object is compiled against the copied closure, and the evidence binds Mojo `1.0.0 (ed45d567)` plus pixi manifest `b66568f6…` and lock `3f61eabd…` | Jetson admission can reject changed source, object, module closure, canonical program, target, or toolchain before attempting native link/run |
 | Cross-compiled `DeviceContext` code embeds PTX targeted at `sm_80` | Canonical object inspection found PTX 8.1 with `.target sm_80` despite the CLI `sm_87` target | The PTX is compatible with Orin JIT, but native `sm_87` specialization must be inspected on Jetson before qualification |
 | Modular MAX 26.5.0 provides a pinned Linux ARM64 NVIDIA image | Registry inspection resolved index `cb38ee4e…` to Linux ARM64 manifest `4566cb6f…`, whose OCI configuration declares ARM64, CUDA 13.0, and Modular revision `ed45d567` | Native acceptance uses this exact manifest rather than a mutable tag or an ambient Jetson toolchain |
 | Wendy admission is fail-closed before deployment | The host runner requires exact WendyOS `0.18.1`, AArch64, NVIDIA, and Jetson Orin device fields before invoking `wendy run`; GPU is its only entitlement | An offline, wrong-OS, wrong-architecture, wrong-vendor, or wrong-device response produces no deployment and cannot become native success |
@@ -51,9 +56,9 @@ flowchart LR
   Preflight --> Protocol["Authenticated typed worker protocol"]
   Protocol --> Worker["Attempt-owned Swift worker"]
   Worker --> Runtime
-  Worker --> Bridge["swift-mojo generated ABI"]
-  Bridge --> MAX["MAX AsyncRT + KGEN"]
-  MAX --> Device["Metal Float32 / CUDA Float32"]
+  Worker --> Bridge["swift-mojo generated ABI: accelerator"]
+  Bridge --> Mojo["Mojo runtime"]
+  Mojo --> Device["Artifact-selected platform backend"]
   Worker --> Evidence["Digest-bound result and evidence"]
 ```
 
@@ -71,8 +76,8 @@ Canonical Float64 program and state
     -> CPU Float64 semantic verifier
     -> explicit finite Float32 materialization
         -> CPU Float32 precision verifier
-        -> Metal Float32 executor
-        -> CUDA Float32 executor
+        -> backend-neutral accelerator executor
+            -> artifact-selected platform backend
 ```
 
 `MojoCanonicalValue` is the semantic boundary. Device-specific storage never
@@ -97,7 +102,7 @@ additionally declare:
 | Runtime distribution | Exact Modular/MAX version and package digest |
 | Dynamic libraries | Exact filenames, digests, platform, and architecture |
 | Loader policy | Worker-relative search roots with no ambient path fallback |
-| Device target | Metal family or CUDA compute capability |
+| Artifact target | Platform triple, CPU, and compiler accelerator target; never exposed as a Kuyu or Manas device choice |
 | Numeric capabilities | Supported storage and compute dtypes |
 | Synchronization | Completion point for every host-visible transfer |
 | Shutdown | Device buffers, context, runtime, and process termination order |
@@ -120,7 +125,7 @@ not discovered through an uncontrolled system search path.
 |---|---|---|---|---|
 | Worker process | Kuyu attempt launcher | Attempt context | One attempt | Missing or contradictory terminal result is failure |
 | MAX runtime | Worker startup | Worker process | Process lifetime | Digest or loader mismatch rejects startup |
-| Device context | Accelerator session factory | Worker session | Attempt or bounded shard | Unsupported API/device is a typed failure |
+| Device context | Mojo accelerator session factory | Worker session | Attempt or bounded shard | Unavailable accelerator is a typed failure; no vendor fallback occurs in Kuyu or Manas |
 | Compiled canonical plan | Kuyu Mojo compiler | Immutable worker snapshot | Program revision | Program digest and executor identity must match |
 | Device buffers | Worker session | Worker session | Bounded operation/session | Destroyed before context shutdown |
 | Host borrow | Swift call scope | Caller | Synchronous borrow | Pointer never escapes the generated ABI call |
@@ -131,9 +136,9 @@ not discovered through an uncontrolled system search path.
 
 | Gate | macOS Metal | Jetson CUDA |
 |---|---|---|
-| Receipt | Canonical Metal object and four-library MAX closure verified as receipt `6d04ae4e…` | Source-complete cross-compile handoff `97f7af7b…` available; native ELF object/shared-library receipt pending |
+| Receipt | Canonical Apple-target object and four-library MAX closure verified as receipt `c0b15f5d…` | Source-complete backend-neutral cross-compile handoff `2e1301af…` available; native ELF object/shared-library receipt pending |
 | Toolchain | Metal Toolchain `v27.1.5237.12` present and used | Cross-compiler locked by pixi manifest `404c7d32…` and lock `3f61eabd…`; native container fixed to MAX image manifest `4566cb6f…` |
-| Build | Exact callable `metal:4` bundle `2e89bda4…` links all declared MAX dylibs; schema-1 bundle `2c6e4b91…` remains the canonical acceptance evidence | Linux ARM64 acceptance image `01ff0807…` built from the pinned manifest and validated Mojo plus the handoff; native shared-library link still requires the admitted CUDA device path |
+| Build | Exact callable `metal:4` bundle `2e89bda4…` links all declared MAX dylibs; backend-neutral canonical evidence bundle `4337e0ba…` reports only `accelerator` to Kuyu | Linux ARM64 acceptance image `01ff0807…` built from the pinned manifest; native shared-library link still requires the admitted Jetson device path |
 | Device | Real Apple GPU context and kernel execution in original and relocated workers | Real Orin `sm_87` context |
 | Numeric | CPU/Metal Float32 differential passed all outputs for 11 graphs × 2 scenarios; Float64 Metal is rejected as a typed compile failure | Float32 kernel; declared capability negotiation |
 | Behavior | Canonical transfer, kernel execution, synchronization, original execution, and relocated execution passed; malformed-device-input tests and production shutdown remain | Same plus native Jetson link/run and PTX/SASS target inspection |

@@ -10,7 +10,6 @@ public struct KuyuManasMojoAdamOptimizerSessionFactory:
 {
   public let bundleURL: URL
   public let requirement: MojoAcceleratorRuntimeBundleRequirement
-  public let sessionRequirements: MojoSessionRequirements
 
   private let preflight: any MojoAcceleratorRuntimeBundlePreflighting
   private let runtimeLoader: any MojoAcceleratorRuntimeLoading
@@ -18,20 +17,11 @@ public struct KuyuManasMojoAdamOptimizerSessionFactory:
   public init(
     bundleURL: URL,
     requirement: MojoAcceleratorRuntimeBundleRequirement,
-    sessionRequirements: MojoSessionRequirements,
     preflight: any MojoAcceleratorRuntimeBundlePreflighting =
       FileSystemMojoAcceleratorRuntimeBundlePreflight(),
     runtimeLoader: any MojoAcceleratorRuntimeLoading =
       DynamicMojoAcceleratorRuntimeLoader()
   ) throws {
-    guard
-      sessionRequirements.device == .metal
-        || sessionRequirements.device == .cuda
-    else {
-      throw
-        KuyuManasMojoAdamOptimizerSessionFactoryError
-        .unsupportedDevice(sessionRequirements.device)
-    }
     guard
       requirement.sessionFactoryFunctionName
         == ManasMojoAdamABI.sessionFactoryFunctionName,
@@ -48,13 +38,6 @@ public struct KuyuManasMojoAdamOptimizerSessionFactory:
     }
     self.bundleURL = bundleURL
     self.requirement = requirement
-    self.sessionRequirements =
-      ManasMojoAdamOptimizerSession.sessionRequirements(
-        device: sessionRequirements.device,
-        ordinal: sessionRequirements.ordinal,
-        additionalCapabilities:
-          sessionRequirements.requiredCapabilities
-      )
     self.preflight = preflight
     self.runtimeLoader = runtimeLoader
   }
@@ -119,7 +102,10 @@ public struct KuyuManasMojoAdamOptimizerSessionFactory:
     let acceleratorSession: any MojoAcceleratorSession
     do {
       acceleratorSession = try runtime.makeSession(
-        requirements: sessionRequirements
+        requirements:
+          ManasMojoAdamOptimizerSession.sessionRequirements(
+            device: .accelerator
+          )
       )
     } catch {
       try cleanup(

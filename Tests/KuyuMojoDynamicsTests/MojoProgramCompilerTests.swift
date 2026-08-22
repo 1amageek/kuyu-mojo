@@ -47,43 +47,45 @@ struct MojoProgramCompilerTests {
             numericType: .float32,
             deviceClass: .cpu
         ).compile(program)
-        let metal = try KuyuMojoProgramCompiler(
+        let accelerator = try KuyuMojoProgramCompiler(
             numericType: .float32,
-            deviceClass: .metal
+            deviceClass: .accelerator
         ).compile(program)
 
         #expect(cpu.identity.deviceClass == .cpu)
-        #expect(metal.identity.deviceClass == .metal)
+        #expect(accelerator.identity.deviceClass == .accelerator)
         #expect(
-            metal.identity.executorVersion
+            accelerator.identity.executorVersion
                 == KuyuMojoProgramCompiler.acceleratorFloat32ExecutorVersion
         )
-        #expect(cpu.identity.programDigest == metal.identity.programDigest)
-        #expect(cpu.forceTermIDs == metal.forceTermIDs)
+        #expect(
+            cpu.identity.programDigest == accelerator.identity.programDigest
+        )
+        #expect(cpu.forceTermIDs == accelerator.forceTermIDs)
         for termID in cpu.forceTermIDs {
             let cpuGraph = try #require(cpu.forceTerms[termID])
-            let metalGraph = try #require(metal.forceTerms[termID])
-            expectSameGraphStructure(cpuGraph, metalGraph)
+            let acceleratorGraph = try #require(
+                accelerator.forceTerms[termID]
+            )
+            expectSameGraphStructure(cpuGraph, acceleratorGraph)
         }
-        expectSameGraphStructure(cpu.derivative, metal.derivative)
-        expectSameGraphStructure(cpu.observables, metal.observables)
+        expectSameGraphStructure(cpu.derivative, accelerator.derivative)
+        expectSameGraphStructure(cpu.observables, accelerator.observables)
     }
 
     @Test(.timeLimit(.minutes(1)))
     func acceleratorCompilationRejectsUnsupportedFloat64() throws {
         let program = try ReferenceQuadrotorCanonicalProgram.make()
-        for deviceClass in [MojoDeviceClass.metal, .cuda] {
-            #expect(
-                throws: MojoProgramCompilationError.unsupportedNumericType(
-                    deviceClass: deviceClass,
-                    numericType: .float64
-                )
-            ) {
-                _ = try KuyuMojoProgramCompiler(
-                    numericType: .float64,
-                    deviceClass: deviceClass
-                ).compile(program)
-            }
+        #expect(
+            throws: MojoProgramCompilationError.unsupportedNumericType(
+                deviceClass: .accelerator,
+                numericType: .float64
+            )
+        ) {
+            _ = try KuyuMojoProgramCompiler(
+                numericType: .float64,
+                deviceClass: .accelerator
+            ).compile(program)
         }
     }
 
@@ -137,38 +139,28 @@ struct MojoProgramCompilerTests {
     @Test(.timeLimit(.minutes(1)))
     func acceleratorAcceptanceSourceIsDeterministicAndCanonical() throws {
         let program = try ReferenceQuadrotorCanonicalProgram.make()
-        let metal = try MojoAcceleratorCanonicalAcceptanceSource.source(
-            for: .metal
+        let accelerator = try MojoAcceleratorCanonicalAcceptanceSource.source(
+            for: .accelerator
         )
-        let repeatedMetal = try MojoAcceleratorCanonicalAcceptanceSource.source(
-            for: .metal
-        )
-        let cuda = try MojoAcceleratorCanonicalAcceptanceSource.source(
-            for: .cuda
+        let repeated = try MojoAcceleratorCanonicalAcceptanceSource.source(
+            for: .accelerator
         )
 
-        #expect(metal == repeatedMetal)
+        #expect(accelerator == repeated)
         #expect(
-            metal.contains(
+            accelerator.contains(
                 "canonical_program_digest=\(program.digest.rawValue)"
             )
         )
-        #expect(metal.contains("canonical_graph_count=11"))
-        #expect(metal.contains("canonical_accelerator_device=metal"))
-        #expect(cuda.contains("canonical_accelerator_device=cuda"))
+        #expect(accelerator.contains("canonical_graph_count=11"))
         #expect(
-            cuda
-                == metal.replacingOccurrences(
-                    of: "canonical_accelerator_device=metal",
-                    with: "canonical_accelerator_device=cuda"
-                )
+            accelerator.contains("canonical_accelerator_device=accelerator")
         )
         #expect(
-            metal.contains("canonical_accelerator_differential=ok")
+            accelerator.contains("canonical_accelerator_differential=ok")
         )
-        #expect(cuda.contains("canonical_accelerator_differential=ok"))
         #expect(
-            metal.components(separatedBy: "canonical_graph=").count - 1
+            accelerator.components(separatedBy: "canonical_graph=").count - 1
                 == 11
         )
         #expect(

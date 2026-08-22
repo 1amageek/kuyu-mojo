@@ -312,7 +312,7 @@ private struct Fixture {
   static let secondaryExecutionFunctionName = "executeShiftedBatch"
   static let graphIdentifier: UInt64 = 42
   static let requirements = MojoSessionRequirements(
-    device: .metal,
+    device: .accelerator,
     requiredCapabilities: [
       .synchronousInvocation,
       .deviceMemory,
