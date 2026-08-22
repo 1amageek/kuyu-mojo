@@ -124,7 +124,7 @@ discovered through an uncontrolled system search path.
 |---|---|---|
 | Receipt | Canonical Metal object and four-library MAX closure verified as receipt `6d04ae4e…` | Source-complete cross-compile handoff `97f7af7b…` available; native ELF object/shared-library receipt pending |
 | Toolchain | Metal Toolchain `v27.1.5237.12` present and used | Cross-compiler locked by pixi manifest `404c7d32…` and lock `3f61eabd…`; native container fixed to MAX image manifest `4566cb6f…` |
-| Build | Exact `metal:4` bundle `2c6e4b91…` links all declared MAX dylibs | Dockerfile static validation passed; native AArch64 image build and executable link still require sufficient builder storage or the admitted device |
+| Build | Exact `metal:4` bundle `2c6e4b91…` links all declared MAX dylibs | Linux ARM64 acceptance image `01ff0807…` built from the pinned manifest and validated Mojo plus the handoff; native executable link still requires the admitted CUDA device path |
 | Device | Real Apple GPU context and kernel execution in original and relocated workers | Real Orin `sm_87` context |
 | Numeric | CPU/Metal Float32 differential passed all outputs for 11 graphs × 2 scenarios; Float64 Metal is rejected as a typed compile failure | Float32 kernel; declared capability negotiation |
 | Behavior | Canonical transfer, kernel execution, synchronization, original execution, and relocated execution passed; malformed-device-input tests and production shutdown remain | Same plus native Jetson link/run and PTX/SASS target inspection |
