@@ -11,41 +11,16 @@ public struct MojoFloat32GraphExecutor: MojoGraphExecuting, Sendable {
         _ graph: MojoCompiledGraph,
         inputs: [CanonicalValueID: MojoCanonicalValue]
     ) throws -> [String: MojoCanonicalValue] {
-        try MojoGraphExecutionSupport.validate(
-            graph,
-            executorNumericType: numericType
+        let invocation = try MojoFloat32GraphInvocation(
+            graph: graph,
+            inputs: inputs
         )
-        let orderedInputs = try MojoGraphExecutionSupport.inputs(
-            for: graph,
-            from: inputs
-        )
-        var payload: [Float] = []
-        payload.reserveCapacity(
-            graph.encodedPlan.count
-                + graph.inputs.reduce(0) { $0 + $1.shape.elementCount }
-        )
-        for element in graph.encodedPlan {
-            let converted = Float(element)
-            guard converted.isFinite else {
-                throw MojoProgramExecutionError.planNotRepresentable(
-                    graphID: graph.graphID,
-                    numericType: numericType
-                )
-            }
-            payload.append(converted)
-        }
-        for (binding, value) in orderedInputs {
-            guard value.appendFloat32(to: &payload) else {
-                throw MojoProgramExecutionError.inputNotRepresentable(
-                    valueID: binding.valueID,
-                    numericType: numericType
-                )
-            }
-        }
+        var payload = invocation.plan
+        payload.append(contentsOf: invocation.runtimeInput)
 
         var workspace = [Float](
             repeating: 0,
-            count: graph.workspaceElementCount
+            count: invocation.workspaceElementCount
         )
         do {
             try executeCanonicalGraphFloat32(payload, into: &workspace)

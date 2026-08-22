@@ -223,7 +223,7 @@ struct MojoAcceleratorWorkerBundlePreflightTests {
 
         #expect(
             bundle.executableURL.lastPathComponent
-                == "kuyu-mojo-metal-vector-add"
+                == "kuyu-mojo-metal-canonical"
         )
         #expect(bundle.verification.libraries.count == 4)
     }
@@ -252,9 +252,9 @@ struct MojoAcceleratorWorkerBundlePreflightTests {
     {
         try MojoAcceleratorWorkerBundleRequirement(
             bundleDigest:
-                "643f18ba4b227ba253e64642fdbfa9de0508d0a85d691d099d0bf846d9bdbf97",
+                "0159c5a65dc14324bcbb5c09b2208857feb242d431df79a420d578d6a8837303",
             receiptDigest:
-                "2bc7264e13acb31f1c0be774cac0b07d5e450d44d552dbfb669dead321b98f50",
+                "5e3ea40d3236289a757e6d063cbe8a2f8bde406cb82537c8338610b81283a6ab",
             target: MojoRuntimeBundleTarget(
                 triple: "arm64-apple-macosx14.0",
                 cpu: "apple-m4",

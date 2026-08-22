@@ -20,6 +20,7 @@ public enum MojoProgramExecutionError: Error, Equatable {
         numericType: MojoNumericType
     )
     case planNotRepresentable(graphID: String, numericType: MojoNumericType)
+    case invalidPlanLayout(graphID: String)
     case numericTypeMismatch(
         expected: MojoNumericType,
         actual: MojoNumericType

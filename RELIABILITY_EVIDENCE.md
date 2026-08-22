@@ -1,5 +1,25 @@
 # Reliability evidence
 
+## 2026-08-22 canonical Metal dynamics acceptance
+
+| Claim | Evidence | Result |
+|---|---|---|
+| Accelerator identity does not change canonical structure | `acceleratorCompilationPreservesCanonicalGraphStructure` compares program digest, force-term order, workspace sizes, encoded plans, input bindings, and output bindings for CPU and Metal Float32 compilations | Passed; Metal uses executor version `mojo-accelerator-float32-ssa-v1` and device class `metal` |
+| Unsupported accelerator precision cannot silently fall back | `acceleratorCompilationRejectsUnsupportedFloat64` requests Metal and CUDA Float64 compilation | Both reject with `MojoProgramCompilationError.unsupportedNumericType` |
+| Plan and runtime storage have an explicit checked boundary | `float32InvocationSeparatesPlanFromRuntimeInput` checks exact plan materialization, runtime element count, workspace size, and rejection of a fractional/corrupt plan boundary | Passed as a typed failure |
+| Canonical Metal execution matches the CPU Float32 oracle | `scripts/accept-metal-canonical-runtime-bundle.sh` generates the harness from reference program digest `6c6773c5a824508fd683390aa7a4acdc1636e8c8483f6ac9ee9667bf62d54310`; nine force graphs, derivative, and observables execute for a full-dynamics scenario and a zero-boundary scenario | 11/11 graphs × 2 batches passed on Apple M4 Max after device transfer and explicit synchronization |
+| The canonical Metal runtime closure is reproducible and relocatable | Two independent script runs produced receipt `5e3ea40d3236289a757e6d063cbe8a2f8bde406cb82537c8338610b81283a6ab` and bundle `0159c5a65dc14324bcbb5c09b2208857feb242d431df79a420d578d6a8837303`; each original and relocated executable ran under `env -i` | Passed four executions; executable `bin/kuyu-mojo-metal-canonical`, exact four-library MAX closure, target `arm64-apple-macosx14.0|apple-m4|metal:4` |
+| Public Kuyu preflight admits only that exact canonical bundle | Full package test used `KUYU_MOJO_TEST_ACCELERATOR_BUNDLE=/tmp/kuyu-mojo-metal-canonical-bundle-v1` and exercised both `KuyuMojoCore` and `KuyuMojoTrainingRuntime` source/relocation checks | 26/26 passed at `/tmp/kuyu-mojo-canonical-metal-final.xcresult`, including the strict CPU performance gate |
+| Checked-in CPU ABIs remain source-derived after the shared interpreter refactor | `swift package --disable-sandbox mojo inspect --target KuyuMojoDynamics` on the final generated artifacts | Passed; two synchronous Float32/Float64 bindings, input graph `74ff401f1cdeca4559652bbd8d0aa38562cc264a48e9ce87f247377d50591cea`, aggregate artifact `77490acc7cbecc26b6f77bc1d2f9a5e37d3d36d113291b35aace839048b0d97b` |
+| Workspace boundaries and source-risk policy still hold | `validate-kuyu-boundaries.sh`, `validate-unconscious-boundaries.sh`, `audit-dangerous-code.sh --verbose`, the incomplete-implementation scan, and `bash -n` for the acceptance script | Passed; zero audit blockers, zero incomplete markers, and 44 pre-existing oversized-file review findings outside this package |
+
+This is a canonical hardware-acceptance slice, not a production accelerator
+session. It proves the same encoded Kuyu equations execute on Metal and that the
+exact runtime artifact can be admitted and relocated. It does not yet prove an
+attempt-owned worker protocol, cancellation/shutdown races, sustained batch
+performance, training correctness, CUDA, native Jetson execution, sanitizer,
+or HIL qualification.
+
 ## 2026-08-21 CPU Float64 and Float32 canonical dynamics
 
 | Claim | Evidence | Result |
@@ -42,10 +62,11 @@ The measured Float32 maximum absolute residuals were `4.60e-7` for force,
 RK4 state, and `4.59e-7` at the zero boundary. Runtime evidence covers macOS
 arm64 CPU Float64 and Float32. Linux ARM64 evidence covers cross-compilation,
 package selection metadata, archive integrity, object architecture, and ABI
-symbols. Metal evidence is limited to the repo-owned Float32 vector-add
-hardware-acceptance kernel and exact runtime deployment. It does not claim a
-canonical Kuyu Metal executor, training, performance qualification, Linux
-native link or execution, CUDA, native Jetson, sanitizer, or HIL qualification.
+symbols. Metal evidence now includes the lower-level Float32 vector-add
+regression and a generated canonical acceptance executable covering all 11
+reference graphs. It does not claim a production Kuyu accelerator session,
+training, performance qualification, Linux native link or execution, CUDA,
+native Jetson, sanitizer, or HIL qualification.
 
 ## Shared-state review matrix
 
@@ -53,7 +74,9 @@ native link or execution, CUDA, native Jetson, sanitizer, or HIL qualification.
 |---|---|---|---|---|---|
 | Compiled program and graphs | Immutable `Sendable` values | Value isolation | Executor methods | None | Value lifetime |
 | Canonical semantic values | Call-local `MojoCanonicalValue` | Calling task | Graph executor input | None | Value lifetime |
-| Encoded invocation payload | Call-local `[Double]` or `[Float]` | Calling task | ABI borrow | Payload assembly before borrow | Automatic |
+| Encoded CPU invocation payload | Call-local `[Double]` or `[Float]` | Calling task | ABI borrow | Payload assembly before borrow | Automatic |
+| Accelerator plan and runtime input | Separate immutable `List[Float32]` values | Acceptance call | Host-to-device copy | Generated before device launch | Call end |
+| Accelerator workspace and status buffers | Call-local MAX host/device buffers | One acceptance call; one graph instance per GPU thread | Read after synchronization | Kernel only | Device-context call end |
 | Mojo workspace | Call-local `[Double]` or `[Float]` | Synchronous mutable borrow | Output reconstruction after return | Mojo ABI call only | Borrow end |
 | Physics and execution identity | Immutable `Sendable` values | Value isolation | Explicit identity API | None | Value lifetime |
 

@@ -9,93 +9,106 @@ def _valid_range(offset: Int, count: Int, limit: Int) -> Bool:
     return count <= limit - offset
 
 
-def _cross_component[dtype: DType](
-    lhs: Pointer[Scalar[dtype], MutUntrackedOrigin],
+def _cross_component[
+    dtype: DType, origin: MutOrigin
+](
+    values: Pointer[Scalar[dtype], origin],
     lhs_offset: Int,
-    rhs: Pointer[Scalar[dtype], MutUntrackedOrigin],
     rhs_offset: Int,
     component: Int,
 ) -> Scalar[dtype]:
     if component == 0:
         return (
-            lhs[unsafe_offset=lhs_offset + 1]
-            * rhs[unsafe_offset=rhs_offset + 2]
-            - lhs[unsafe_offset=lhs_offset + 2]
-            * rhs[unsafe_offset=rhs_offset + 1]
+            values[unsafe_offset=lhs_offset + 1]
+            * values[unsafe_offset=rhs_offset + 2]
+            - values[unsafe_offset=lhs_offset + 2]
+            * values[unsafe_offset=rhs_offset + 1]
         )
     if component == 1:
         return (
-            lhs[unsafe_offset=lhs_offset + 2]
-            * rhs[unsafe_offset=rhs_offset]
-            - lhs[unsafe_offset=lhs_offset]
-            * rhs[unsafe_offset=rhs_offset + 2]
+            values[unsafe_offset=lhs_offset + 2]
+            * values[unsafe_offset=rhs_offset]
+            - values[unsafe_offset=lhs_offset]
+            * values[unsafe_offset=rhs_offset + 2]
         )
     return (
-        lhs[unsafe_offset=lhs_offset]
-        * rhs[unsafe_offset=rhs_offset + 1]
-        - lhs[unsafe_offset=lhs_offset + 1]
-        * rhs[unsafe_offset=rhs_offset]
+        values[unsafe_offset=lhs_offset] * values[unsafe_offset=rhs_offset + 1]
+        - values[unsafe_offset=lhs_offset + 1]
+        * values[unsafe_offset=rhs_offset]
     )
 
 
-def _execute_graph[dtype: DType](
-    input: Pointer[Scalar[dtype], ImmUntrackedOrigin],
-    input_count: UInt64,
-    output: Pointer[Scalar[dtype], MutUntrackedOrigin],
+def _execute_graph_plan[
+    dtype: DType,
+    plan_origin: ImmOrigin,
+    runtime_origin: ImmOrigin,
+    output_origin: MutOrigin,
+](
+    plan: Pointer[Scalar[dtype], plan_origin],
+    plan_count: UInt64,
+    runtime_input: Pointer[Scalar[dtype], runtime_origin],
+    runtime_input_count: UInt64,
+    output: Pointer[Scalar[dtype], output_origin],
     output_count: UInt64,
     expected_magic: Int,
 ) -> Int32:
-    var encoded_count = Int(input_count)
+    var encoded_plan_count = Int(plan_count)
+    var provided_runtime_input_count = Int(runtime_input_count)
     var workspace_count = Int(output_count)
-    if encoded_count < 8:
+    if encoded_plan_count < 8:
         return Int32(1)
 
-    var magic = Int(input[unsafe_offset=0])
-    var schema = Int(input[unsafe_offset=1])
-    var instruction_count = Int(input[unsafe_offset=2])
-    var declared_workspace_count = Int(input[unsafe_offset=3])
-    var runtime_input_count = Int(input[unsafe_offset=4])
-    var instruction_width = Int(input[unsafe_offset=5])
-    var instruction_start = Int(input[unsafe_offset=6])
-    var runtime_start = Int(input[unsafe_offset=7])
+    var magic = Int(plan[unsafe_offset=0])
+    var schema = Int(plan[unsafe_offset=1])
+    var instruction_count = Int(plan[unsafe_offset=2])
+    var declared_workspace_count = Int(plan[unsafe_offset=3])
+    var declared_runtime_input_count = Int(plan[unsafe_offset=4])
+    var instruction_width = Int(plan[unsafe_offset=5])
+    var instruction_start = Int(plan[unsafe_offset=6])
+    var runtime_start = Int(plan[unsafe_offset=7])
 
     if magic != expected_magic or schema != 1:
         return Int32(1)
-    if instruction_count < 0 or runtime_input_count < 0:
+    if instruction_count < 0 or declared_runtime_input_count < 0:
         return Int32(1)
     if instruction_width != 16 or instruction_start != 8:
         return Int32(1)
-    if runtime_start != instruction_start + instruction_count * instruction_width:
+    if (
+        runtime_start
+        != instruction_start + instruction_count * instruction_width
+    ):
         return Int32(1)
-    if encoded_count != runtime_start + runtime_input_count:
+    if encoded_plan_count != runtime_start:
+        return Int32(1)
+    if declared_runtime_input_count != provided_runtime_input_count:
         return Int32(1)
     if declared_workspace_count != workspace_count or workspace_count <= 0:
         return Int32(2)
-    if runtime_input_count > workspace_count:
+    if declared_runtime_input_count > workspace_count:
         return Int32(2)
 
     for index in range(workspace_count):
         output[unsafe_offset=index] = Scalar[dtype](0)
-    for index in range(runtime_input_count):
-        var value = input[unsafe_offset=runtime_start + index]
+    for index in range(declared_runtime_input_count):
+        var value = runtime_input[unsafe_offset=index]
         if not isfinite(value):
             return Int32(5)
         output[unsafe_offset=index] = value
 
     for instruction_index in range(instruction_count):
         var base = instruction_start + instruction_index * instruction_width
-        var opcode = Int(input[unsafe_offset=base])
-        var result_offset = Int(input[unsafe_offset=base + 1])
-        var result_count = Int(input[unsafe_offset=base + 2])
-        var operand_count = Int(input[unsafe_offset=base + 3])
-        var operand0_offset = Int(input[unsafe_offset=base + 4])
-        var operand0_count = Int(input[unsafe_offset=base + 5])
-        var operand1_offset = Int(input[unsafe_offset=base + 6])
-        var operand1_count = Int(input[unsafe_offset=base + 7])
-        var operand2_offset = Int(input[unsafe_offset=base + 8])
-        var operand2_count = Int(input[unsafe_offset=base + 9])
-        var component_index = Int(input[unsafe_offset=base + 10])
-        var constant_count = Int(input[unsafe_offset=base + 11])
+        var opcode = Int(plan[unsafe_offset=base])
+        var result_offset = Int(plan[unsafe_offset=base + 1])
+        var result_count = Int(plan[unsafe_offset=base + 2])
+        var operand_count = Int(plan[unsafe_offset=base + 3])
+        var operand0_offset = Int(plan[unsafe_offset=base + 4])
+        var operand0_count = Int(plan[unsafe_offset=base + 5])
+        var operand1_offset = Int(plan[unsafe_offset=base + 6])
+        var operand1_count = Int(plan[unsafe_offset=base + 7])
+        var operand2_offset = Int(plan[unsafe_offset=base + 8])
+        var operand2_count = Int(plan[unsafe_offset=base + 9])
+        var component_index = Int(plan[unsafe_offset=base + 10])
+        var constant_count = Int(plan[unsafe_offset=base + 11])
 
         if not _valid_range(result_offset, result_count, workspace_count):
             return Int32(3)
@@ -120,7 +133,7 @@ def _execute_graph[dtype: DType](
             if operand_count != 0 or constant_count != result_count:
                 return Int32(3)
             for component in range(result_count):
-                output[unsafe_offset=result_offset + component] = input[
+                output[unsafe_offset=result_offset + component] = plan[
                     unsafe_offset=base + 12 + component
                 ]
         elif opcode == 1 or opcode == 2:
@@ -140,9 +153,7 @@ def _execute_graph[dtype: DType](
         elif opcode == 3:
             if operand_count != 2:
                 return Int32(3)
-            if (
-                operand0_count != 1 and operand0_count != result_count
-            ) or (
+            if (operand0_count != 1 and operand0_count != result_count) or (
                 operand1_count != 1 and operand1_count != result_count
             ):
                 return Int32(3)
@@ -216,9 +227,15 @@ def _execute_graph[dtype: DType](
                 or operand2_count != 1
             ):
                 return Int32(3)
-            output[unsafe_offset=result_offset] = output[unsafe_offset=operand0_offset]
-            output[unsafe_offset=result_offset + 1] = output[unsafe_offset=operand1_offset]
-            output[unsafe_offset=result_offset + 2] = output[unsafe_offset=operand2_offset]
+            output[unsafe_offset=result_offset] = output[
+                unsafe_offset=operand0_offset
+            ]
+            output[unsafe_offset=result_offset + 1] = output[
+                unsafe_offset=operand1_offset
+            ]
+            output[unsafe_offset=result_offset + 2] = output[
+                unsafe_offset=operand2_offset
+            ]
         elif opcode == 10:
             if (
                 operand_count != 2
@@ -228,10 +245,11 @@ def _execute_graph[dtype: DType](
             ):
                 return Int32(3)
             for component in range(3):
-                output[unsafe_offset=result_offset + component] = _cross_component[dtype](
+                output[
+                    unsafe_offset=result_offset + component
+                ] = _cross_component[dtype](
                     output,
                     operand0_offset,
-                    output,
                     operand1_offset,
                     component,
                 )
@@ -251,7 +269,9 @@ def _execute_graph[dtype: DType](
                     return Int32(3)
                 if length == 0:
                     for component in range(3):
-                        output[unsafe_offset=result_offset + component] = Scalar[dtype](0)
+                        output[
+                            unsafe_offset=result_offset + component
+                        ] = Scalar[dtype](0)
                 else:
                     output[unsafe_offset=result_offset] = x / length
                     output[unsafe_offset=result_offset + 1] = y / length
@@ -275,13 +295,25 @@ def _execute_graph[dtype: DType](
             var ty = Scalar[dtype](2) * (qz * vx - qx * vz)
             var tz = Scalar[dtype](2) * (qx * vy - qy * vx)
             if opcode == 13:
-                output[unsafe_offset=result_offset] = vx + qw * tx + (qy * tz - qz * ty)
-                output[unsafe_offset=result_offset + 1] = vy + qw * ty + (qz * tx - qx * tz)
-                output[unsafe_offset=result_offset + 2] = vz + qw * tz + (qx * ty - qy * tx)
+                output[unsafe_offset=result_offset] = (
+                    vx + qw * tx + (qy * tz - qz * ty)
+                )
+                output[unsafe_offset=result_offset + 1] = (
+                    vy + qw * ty + (qz * tx - qx * tz)
+                )
+                output[unsafe_offset=result_offset + 2] = (
+                    vz + qw * tz + (qx * ty - qy * tx)
+                )
             else:
-                output[unsafe_offset=result_offset] = vx - qw * tx + (qy * tz - qz * ty)
-                output[unsafe_offset=result_offset + 1] = vy - qw * ty + (qz * tx - qx * tz)
-                output[unsafe_offset=result_offset + 2] = vz - qw * tz + (qx * ty - qy * tx)
+                output[unsafe_offset=result_offset] = (
+                    vx - qw * tx + (qy * tz - qz * ty)
+                )
+                output[unsafe_offset=result_offset + 1] = (
+                    vy - qw * ty + (qz * tx - qx * tz)
+                )
+                output[unsafe_offset=result_offset + 2] = (
+                    vz - qw * tz + (qx * ty - qy * tx)
+                )
         elif opcode == 15:
             if (
                 operand_count != 2
@@ -317,6 +349,36 @@ def _execute_graph[dtype: DType](
                 return Int32(5)
 
     return Int32(0)
+
+
+def _execute_graph[
+    dtype: DType,
+    input_origin: ImmOrigin,
+    output_origin: MutOrigin,
+](
+    input: Pointer[Scalar[dtype], input_origin],
+    input_count: UInt64,
+    output: Pointer[Scalar[dtype], output_origin],
+    output_count: UInt64,
+    expected_magic: Int,
+) -> Int32:
+    var encoded_count = Int(input_count)
+    if encoded_count < 8:
+        return Int32(1)
+    var runtime_start = Int(input[unsafe_offset=7])
+    if not _valid_range(
+        runtime_start, encoded_count - runtime_start, encoded_count
+    ):
+        return Int32(1)
+    return _execute_graph_plan[dtype](
+        input,
+        UInt64(runtime_start),
+        input.unsafe_offset(runtime_start),
+        UInt64(encoded_count - runtime_start),
+        output,
+        output_count,
+        expected_magic,
+    )
 
 
 def execute_graph(

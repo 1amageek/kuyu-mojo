@@ -4,6 +4,8 @@ import KuyuMojoCore
 public struct KuyuMojoProgramCompiler: MojoDynamicsProgramCompiling, Sendable {
     public static let float32ExecutorVersion = "mojo-cpu-float32-ssa-v1"
     public static let float64ExecutorVersion = "mojo-cpu-float64-ssa-v2"
+    public static let acceleratorFloat32ExecutorVersion =
+        "mojo-accelerator-float32-ssa-v1"
 
     static let float32PlanMagic = 4_937_049
     static let float64PlanMagic = 1_263_883_861
@@ -14,13 +16,16 @@ public struct KuyuMojoProgramCompiler: MojoDynamicsProgramCompiling, Sendable {
     static let maximumConstantCount = 4
 
     public let numericType: MojoNumericType
+    public let deviceClass: MojoDeviceClass
     private let graphValidator: any CanonicalOperationGraphValidating
 
     public init(
         numericType: MojoNumericType = .float64,
+        deviceClass: MojoDeviceClass = .cpu,
         graphValidator: any CanonicalOperationGraphValidating = CanonicalOperationGraphValidator()
     ) {
         self.numericType = numericType
+        self.deviceClass = deviceClass
         self.graphValidator = graphValidator
     }
 
@@ -30,9 +35,9 @@ public struct KuyuMojoProgramCompiler: MojoDynamicsProgramCompiling, Sendable {
         let identity = try MojoCompiledProgramIdentity(
             programSchemaVersion: program.content.schemaVersion,
             programDigest: program.digest.rawValue,
-            executorVersion: executorVersion,
+            executorVersion: try resolvedExecutorVersion(),
             numericType: numericType,
-            deviceClass: .cpu
+            deviceClass: deviceClass
         )
         var forceTerms: [CanonicalForceTermID: MojoCompiledGraph] = [:]
         var forceTermIDs: [CanonicalForceTermID] = []
@@ -241,12 +246,19 @@ public struct KuyuMojoProgramCompiler: MojoDynamicsProgramCompiling, Sendable {
         )
     }
 
-    private var executorVersion: String {
-        switch numericType {
-        case .float32:
-            Self.float32ExecutorVersion
-        case .float64:
-            Self.float64ExecutorVersion
+    private func resolvedExecutorVersion() throws -> String {
+        switch (deviceClass, numericType) {
+        case (.cpu, .float32):
+            return Self.float32ExecutorVersion
+        case (.cpu, .float64):
+            return Self.float64ExecutorVersion
+        case (.metal, .float32), (.cuda, .float32):
+            return Self.acceleratorFloat32ExecutorVersion
+        case (.metal, .float64), (.cuda, .float64):
+            throw MojoProgramCompilationError.unsupportedNumericType(
+                deviceClass: deviceClass,
+                numericType: numericType
+            )
         }
     }
 

@@ -2,6 +2,10 @@ import KuyuPhysics
 import KuyuMojoCore
 
 public enum MojoProgramCompilationError: Error, Equatable {
+    case unsupportedNumericType(
+        deviceClass: MojoDeviceClass,
+        numericType: MojoNumericType
+    )
     case duplicateForceTerm(CanonicalForceTermID)
     case missingValueSignature(graphID: String, valueID: CanonicalValueID)
     case unsupportedShape(

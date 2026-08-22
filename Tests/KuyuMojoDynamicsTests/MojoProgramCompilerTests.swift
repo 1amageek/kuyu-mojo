@@ -41,6 +41,120 @@ struct MojoProgramCompilerTests {
     }
 
     @Test(.timeLimit(.minutes(1)))
+    func acceleratorCompilationPreservesCanonicalGraphStructure() throws {
+        let program = try ReferenceQuadrotorCanonicalProgram.make()
+        let cpu = try KuyuMojoProgramCompiler(
+            numericType: .float32,
+            deviceClass: .cpu
+        ).compile(program)
+        let metal = try KuyuMojoProgramCompiler(
+            numericType: .float32,
+            deviceClass: .metal
+        ).compile(program)
+
+        #expect(cpu.identity.deviceClass == .cpu)
+        #expect(metal.identity.deviceClass == .metal)
+        #expect(
+            metal.identity.executorVersion
+                == KuyuMojoProgramCompiler.acceleratorFloat32ExecutorVersion
+        )
+        #expect(cpu.identity.programDigest == metal.identity.programDigest)
+        #expect(cpu.forceTermIDs == metal.forceTermIDs)
+        for termID in cpu.forceTermIDs {
+            let cpuGraph = try #require(cpu.forceTerms[termID])
+            let metalGraph = try #require(metal.forceTerms[termID])
+            expectSameGraphStructure(cpuGraph, metalGraph)
+        }
+        expectSameGraphStructure(cpu.derivative, metal.derivative)
+        expectSameGraphStructure(cpu.observables, metal.observables)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func acceleratorCompilationRejectsUnsupportedFloat64() throws {
+        let program = try ReferenceQuadrotorCanonicalProgram.make()
+        for deviceClass in [MojoDeviceClass.metal, .cuda] {
+            #expect(
+                throws: MojoProgramCompilationError.unsupportedNumericType(
+                    deviceClass: deviceClass,
+                    numericType: .float64
+                )
+            ) {
+                _ = try KuyuMojoProgramCompiler(
+                    numericType: .float64,
+                    deviceClass: deviceClass
+                ).compile(program)
+            }
+        }
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func float32InvocationSeparatesPlanFromRuntimeInput() throws {
+        let program = try ReferenceQuadrotorCanonicalProgram.make()
+        let graph = try KuyuMojoProgramCompiler(numericType: .float32)
+            .compile(program)
+            .derivative
+        let inputs = Dictionary(
+            uniqueKeysWithValues: graph.inputs.map {
+                ($0.valueID, finiteZero(shape: $0.shape))
+            }
+        )
+        let invocation = try MojoFloat32GraphInvocation(
+            graph: graph,
+            inputs: inputs
+        )
+
+        #expect(invocation.plan == graph.encodedPlan.map(Float.init))
+        #expect(invocation.plan[7] == Float(invocation.plan.count))
+        #expect(invocation.plan[4] == Float(invocation.runtimeInput.count))
+        #expect(
+            invocation.runtimeInput.count
+                == graph.inputs.reduce(0) { $0 + $1.shape.elementCount }
+        )
+        #expect(invocation.workspaceElementCount == graph.workspaceElementCount)
+
+        var invalidStorage = graph.encodedPlan
+        invalidStorage[7] += 0.25
+        let invalidGraph = MojoCompiledGraph(
+            identity: graph.identity,
+            graphID: graph.graphID,
+            workspaceElementCount: graph.workspaceElementCount,
+            encodedPlan: invalidStorage,
+            inputs: graph.inputs,
+            outputs: graph.outputs
+        )
+        #expect(
+            throws: MojoProgramExecutionError.invalidPlanLayout(
+                graphID: graph.graphID
+            )
+        ) {
+            _ = try MojoFloat32GraphInvocation(
+                graph: invalidGraph,
+                inputs: inputs
+            )
+        }
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func metalAcceptanceSourceIsDeterministicAndCanonical() throws {
+        let program = try ReferenceQuadrotorCanonicalProgram.make()
+        let first = try MojoMetalCanonicalAcceptanceSource.source()
+        let second = try MojoMetalCanonicalAcceptanceSource.source()
+
+        #expect(first == second)
+        #expect(
+            first.contains(
+                "canonical_program_digest=\(program.digest.rawValue)"
+            )
+        )
+        #expect(first.contains("canonical_graph_count=11"))
+        #expect(first.contains("canonical_metal_differential=ok"))
+        #expect(
+            first.components(separatedBy: "canonical_graph=").count - 1
+                == 11
+        )
+    }
+
+    @Test(.timeLimit(.minutes(1)))
     func graphExecutorRejectsMissingShapeAndNonFiniteInputs() throws {
         let program = try ReferenceQuadrotorCanonicalProgram.make()
         let graph = try KuyuMojoProgramCompiler()
@@ -254,6 +368,17 @@ struct MojoProgramCompilerTests {
                 ),
             ]
         )
+    }
+
+    private func expectSameGraphStructure(
+        _ lhs: MojoCompiledGraph,
+        _ rhs: MojoCompiledGraph
+    ) {
+        #expect(lhs.graphID == rhs.graphID)
+        #expect(lhs.workspaceElementCount == rhs.workspaceElementCount)
+        #expect(lhs.encodedPlan == rhs.encodedPlan)
+        #expect(lhs.inputs == rhs.inputs)
+        #expect(lhs.outputs == rhs.outputs)
     }
 
     private func finiteZero(shape: CanonicalValueShape) -> MojoCanonicalValue {

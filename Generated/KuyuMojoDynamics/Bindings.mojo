@@ -10,7 +10,7 @@ def swift_mojo_f02a731c3b1b167be2708c289ebef05b89c003f83ae61bf3d3cb65b8d89601f1_
 
 @export("swift_mojo_f02a731c3b1b167be2708c289ebef05b89c003f83ae61bf3d3cb65b8d89601f1_input_graph_identifier")
 def swift_mojo_f02a731c3b1b167be2708c289ebef05b89c003f83ae61bf3d3cb65b8d89601f1_input_graph_identifier() abi("C") -> UInt64:
-    return 5409467021833297308
+    return 8430527529833384517
 
 
 @export("swift_mojo_f02a731c3b1b167be2708c289ebef05b89c003f83ae61bf3d3cb65b8d89601f1_has_binding")

@@ -20,6 +20,10 @@ let package = Package(
             name: "KuyuMojoTrainingRuntime",
             targets: ["KuyuMojoTrainingRuntime"]
         ),
+        .executable(
+            name: "kuyu-mojo-metal-acceptance-fixture",
+            targets: ["KuyuMojoMetalAcceptanceFixture"]
+        ),
     ],
     dependencies: [
         .package(path: "../kuyu-core"),
@@ -74,6 +78,10 @@ let package = Package(
                 "KuyuMojoCore",
                 .product(name: "KuyuTraining", package: "kuyu-training"),
             ]
+        ),
+        .executableTarget(
+            name: "KuyuMojoMetalAcceptanceFixture",
+            dependencies: ["KuyuMojoDynamics"]
         ),
         .testTarget(
             name: "KuyuMojoDynamicsTests",
