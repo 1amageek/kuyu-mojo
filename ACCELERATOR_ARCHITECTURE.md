@@ -21,7 +21,8 @@ distribution `26.5.0`, MAX `26.5.0`, and Mojo `1.0.0 (ed45d567)` on
 | The canonical Metal bundle is reproducible and relocatable | The backend-neutral generator produced receipt `6d04ae4e8a0cdc9320316e417ac5a63e2d6d64ea8f02f872f9425de8b16687be` and bundle `2c6e4b91593af4db7fc939cfa4c72d1fa534eaf36cd6705f78f3b0c134040ae8`; original and relocated `env -i` executions each passed 11 graphs × 2 scenarios | Canonical graph execution, transfer, synchronization, runtime closure, and relocation are proven on Apple M4 Max; production worker lifecycle and training remain separate gates |
 | Kuyu can independently admit the bundle through a public read-only API | `MojoAcceleratorWorkerBundlePreflighting` re-verified the canonical bundle and matched schema, bundle digest, receipt digest, and target before returning `bin/kuyu-mojo-metal-canonical` | Source and staged snapshots can use the same fail-closed Kuyu preflight without importing swift-mojo internals |
 | Jetson Orin is the official `sm_87` target | Mojo's supported-target query reports `sm_87 - Ampere embedded (Jetson Orin)` | Jetson builds fix host `aarch64-unknown-linux-gnu`, CPU `cortex-a78ae`, and accelerator `sm_87` |
-| Cross-compilation produces a real canonical AArch64 ELF object | The same generator's CUDA fixture emitted a 201,288-byte ELF64 AArch64 relocatable object with SHA-256 `8ea07b02a67eda0b40ee413b29f0628892ea43e0ecb06dff386f22744885c746` | Canonical host architecture generation and CUDA evidence identity are proven, but native link and execution are not |
+| Cross-compilation produces a real canonical AArch64 ELF object | The same generator's CUDA fixture emitted a 201,528-byte ELF64 AArch64 relocatable object with SHA-256 `ef696d6dbc8dfe42af2374e828e98b252d8d67471c3c158554e27a4622723b1b` | Canonical host architecture generation and CUDA evidence identity are proven, but native link and execution are not |
+| The CUDA handoff is reproducible and toolchain-bound | Two independent runs of `scripts/prepare-cuda-canonical-acceptance.sh` produced identical source `3467e04c…`, object `ef696d6d…`, and evidence `18184adb…`; the evidence binds Mojo `1.0.0 (ed45d567)` plus pixi manifest `404c7d32…` and lock `3f61eabd…` | Jetson admission can reject changed source, object, canonical program, target, or toolchain before attempting native link/run |
 | Cross-compiled `DeviceContext` code embeds PTX targeted at `sm_80` | Canonical object inspection found PTX 8.1 with `.target sm_80` despite the CLI `sm_87` target | The PTX is compatible with Orin JIT, but native `sm_87` specialization must be inspected on Jetson before qualification |
 
 The device compatibility source is the official
@@ -119,8 +120,8 @@ discovered through an uncontrolled system search path.
 
 | Gate | macOS Metal | Jetson CUDA |
 |---|---|---|
-| Receipt | Canonical Metal object and four-library MAX closure verified as receipt `6d04ae4e…` | Native ELF object/shared-library receipt pending |
-| Toolchain | Metal Toolchain `v27.1.5237.12` present and used | Native Modular/MAX and CUDA toolchain present |
+| Receipt | Canonical Metal object and four-library MAX closure verified as receipt `6d04ae4e…` | Cross-compile handoff `18184adb…` available; native ELF object/shared-library receipt pending |
+| Toolchain | Metal Toolchain `v27.1.5237.12` present and used | Cross-compiler locked by pixi manifest `404c7d32…` and lock `3f61eabd…`; native Modular/MAX and CUDA toolchain still required |
 | Build | Exact `metal:4` bundle `2c6e4b91…` links all declared MAX dylibs | Native AArch64 worker links declared MAX shared libraries |
 | Device | Real Apple GPU context and kernel execution in original and relocated workers | Real Orin `sm_87` context |
 | Numeric | CPU/Metal Float32 differential passed all outputs for 11 graphs × 2 scenarios; Float64 Metal is rejected as a typed compile failure | Float32 kernel; declared capability negotiation |

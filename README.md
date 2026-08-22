@@ -10,28 +10,46 @@ CanonicalDynamicsProgram
         -> immutable numeric-specific SSA plan
             -> Mojo Float64 / Float32 CPU execution
             -> Float32 plan + batched runtime inputs
-                -> Mojo Metal acceptance executor
+                -> backend-neutral accelerator acceptance source
+                    -> Metal runtime bundle (native accepted)
+                    -> CUDA AArch64 handoff (cross-compiled)
 ```
 
 The current runtime-verified slices include deterministic macOS CPU Float64 and
 Float32 execution and bounded Apple M4 Metal Float32 execution of the same
 canonical SSA plans. Float64 remains the semantic verifier. Float32 establishes
 the explicit precision boundary required by Apple Metal and NVIDIA CUDA. The
-Metal acceptance generator compiles the reference program once for CPU and
-Metal identities, proves that all graph plans and bindings are identical, and
-then compares all outputs of nine force graphs, the derivative graph, and the
-observable graph for two scenarios. One GPU thread owns each graph instance;
-plan and runtime input storage are transferred separately, and host-visible
-results are read only after explicit synchronization.
+backend-neutral acceptance generator compiles the reference program once for
+CPU and accelerator identities, proves that all graph plans and bindings are
+identical, and then compares all outputs of nine force graphs, the derivative
+graph, and the observable graph for two scenarios. One GPU thread owns each
+graph instance; plan and runtime input storage are transferred separately, and
+host-visible results are read only after explicit synchronization.
 
 The canonical acceptance executable is an evidence tool, not the public Kuyu
 runtime executor or training worker. It creates a bounded device context for
 each acceptance call and deliberately omits worker lifecycle, cancellation,
 progress, performance qualification, and artifact publication. Those concerns
-remain at the attempt-owned worker boundary. Both generated C ABIs are still
-cross-packaged in one Linux ARM64 static library artifact for native acceptance
-on Jetson. Cross-compilation is not native execution evidence; CUDA and native
-Jetson `sm_87` execution retain separate acceptance gates.
+remain at the attempt-owned worker boundary. The CPU ABIs remain packaged in a
+Linux ARM64 static library. The CUDA acceptance source is instead preserved as
+a digest-bound AArch64 ELF handoff for native acceptance on Jetson.
+Cross-compilation is not native execution evidence; native linking, device
+execution, and Jetson `sm_87` qualification retain separate acceptance gates.
+
+Prepare that handoff from the pinned Modular pixi workspace with:
+
+```bash
+KUYU_MOJO_MAX_PIXI_PROJECT=/absolute/path/to/pixi-workspace \
+  scripts/prepare-cuda-canonical-acceptance.sh \
+  /absolute/path/to/new-output-directory
+```
+
+The output contains `CanonicalCUDAAcceptance.mojo`, its AArch64 ELF object,
+and `CrossCompileEvidence.json`. The evidence records the canonical program,
+source and object digests, host/CPU/accelerator targets, embedded PTX identity,
+Mojo version, and pixi manifest/lock digests. It always records
+`artifactStatus: crossCompiledOnly` and `nativeAcceptance: false`; only native
+Jetson acceptance may advance those claims.
 
 The pinned swift-mojo revision provides schema-1 accelerator runtime receipts,
 isolated worker bundles, and a public read-only bundle verifier. KuyuMojoCore's
