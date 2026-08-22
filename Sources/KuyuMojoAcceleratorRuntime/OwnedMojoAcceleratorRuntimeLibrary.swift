@@ -1,4 +1,5 @@
 @_spi(SwiftMojoGenerated) import Mojo
+import MojoRuntime
 import Synchronization
 
 #if canImport(Darwin)
@@ -36,13 +37,13 @@ final class OwnedMojoAcceleratorRuntimeLibrary:
   private let state: Mutex<State>
   private let abi: MojoAcceleratorDynamicABI
   private let sessionFactoryBindingID: UInt64
-  private let executionBindingID: UInt64
+  private let executionBindings: [MojoRuntimeLibraryBinding]
 
   init(
     handle: UnsafeMutableRawPointer,
     abi: MojoAcceleratorDynamicABI,
     sessionFactoryBindingID: UInt64,
-    executionBindingID: UInt64
+    executionBindings: [MojoRuntimeLibraryBinding]
   ) {
     self.state = Mutex(
       State(
@@ -53,7 +54,7 @@ final class OwnedMojoAcceleratorRuntimeLibrary:
     )
     self.abi = abi
     self.sessionFactoryBindingID = sessionFactoryBindingID
-    self.executionBindingID = executionBindingID
+    self.executionBindings = executionBindings
   }
 
   var isShutdown: Bool {
@@ -162,7 +163,7 @@ final class OwnedMojoAcceleratorRuntimeLibrary:
         owner: owner,
         abi: abi,
         sessionDomainID: sessionFactoryBindingID,
-        executionBindingID: executionBindingID
+        executionBindings: executionBindings
       )
     } catch {
       abi.shutdownSession(sessionFactoryBindingID, sessionHandle)

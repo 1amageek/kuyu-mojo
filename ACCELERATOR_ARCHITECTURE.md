@@ -20,7 +20,7 @@ distribution `26.5.0`, MAX `26.5.0`, and Mojo `1.0.0 (ed45d567)` on
 | A Metal kernel bundle is reproducible and relocatable | The repo-owned acceptance source twice produced receipt `2bc7264e13acb31f1c0be774cac0b07d5e450d44d552dbfb669dead321b98f50` and bundle `643f18ba4b227ba253e64642fdbfa9de0508d0a85d691d099d0bf846d9bdbf97`; original and relocated `env -i` execution both passed kernel, transfer, synchronization, and 257-value correctness checks | Runtime packaging now covers real Metal execution, but not canonical dynamics, policy training, worker lifecycle, or performance qualification |
 | The canonical Metal bundle is reproducible and relocatable | The backend-neutral generator produced receipt `6d04ae4e8a0cdc9320316e417ac5a63e2d6d64ea8f02f872f9425de8b16687be` and bundle `2c6e4b91593af4db7fc939cfa4c72d1fa534eaf36cd6705f78f3b0c134040ae8`; original and relocated `env -i` executions each passed 11 graphs × 2 scenarios | Canonical graph execution, transfer, synchronization, runtime closure, and relocation are proven on Apple M4 Max; production worker lifecycle and training remain separate gates |
 | A generated callable Metal library has a persistent session ABI | swift-mojo schema-3 bundle `2e89bda4bc15fb935f5df9cb1a43f029336653ef095bea62d60076dbb3d84f99` and receipt `3969ad6b6d12dd2416aa745bdc4037ad2faba85bd24b34d0abd3d5eb1c8be747` bind the module, input graph, generated header, runtime closure, factory, and borrowed-buffer execution function; a minimal-environment C probe and the Swift loader both reused one Apple M4 Metal session | Production admission and invocation no longer depend on the schema-1 acceptance executable; session/device-buffer lifetime is explicit and reusable |
-| Kuyu can independently admit the callable runtime through a public read-only API | `MojoAcceleratorRuntimeBundlePreflighting` re-verifies the schema-3 bundle and matches schema, bundle/receipt/graph identities, target, module, and the typed factory/execution relationship before returning the verified dylib and bindings | An outer attempt worker bundle can re-verify the nested runtime on source and staged snapshots without importing swift-mojo internals into the generic launcher |
+| Kuyu can independently admit the callable runtime through a public read-only API | `MojoAcceleratorRuntimeBundlePreflighting` re-verifies the schema-3 bundle and matches schema, bundle/receipt/graph identities, target, module, and every typed factory/execution relationship before returning the verified dylib and ordered bindings | An outer attempt worker bundle can re-verify the nested runtime on source and staged snapshots without importing swift-mojo internals into the generic launcher |
 | Jetson Orin is the official `sm_87` target | Mojo's supported-target query reports `sm_87 - Ampere embedded (Jetson Orin)` | Jetson builds fix host `aarch64-unknown-linux-gnu`, CPU `cortex-a78ae`, and accelerator `sm_87` |
 | Cross-compilation produces a real canonical AArch64 ELF object | The same generator's CUDA fixture emitted a 201,528-byte ELF64 AArch64 relocatable object with SHA-256 `ef696d6dbc8dfe42af2374e828e98b252d8d67471c3c158554e27a4622723b1b` | Canonical host architecture generation and CUDA evidence identity are proven, but native link and execution are not |
 | The CUDA handoff is reproducible, source-complete, and toolchain-bound | Two independent runs of `scripts/prepare-cuda-canonical-acceptance.sh` produced identical source `3467e04c…`, object `ef696d6d…`, imported module closure `8ddf1b9e…`, and evidence `97f7af7b…`; the object is compiled against the copied closure, and the evidence binds Mojo `1.0.0 (ed45d567)` plus pixi manifest `404c7d32…` and lock `3f61eabd…` | Jetson admission can reject changed source, object, module closure, canonical program, target, or toolchain before attempting native link/run |
@@ -106,10 +106,13 @@ The receipt verifier rejects a changed, missing, ambiguous, unreachable,
 wrong-architecture, or path-disguised runtime dependency. Bundle verification
 then rejects changed files, extra entries, missing runtime imports, and ambient
 loader roots before Kuyu accepts an attempt. Kuyu additionally requires exact
-schema, bundle, receipt, target, module, and input-graph matches, a single typed
-factory/execution relationship, and a safe library-relative path even when a
-verifier implementation is injected. Runtime libraries are packaged beside the
-worker; they are not discovered through an uncontrolled system search path.
+schema, bundle, receipt, target, module, and input-graph matches, one typed
+factory and a nonempty ordered set of uniquely named execution bindings owned
+by that factory, and a safe library-relative path even when a verifier
+implementation is injected. Duplicate binding IDs, missing generated ABI
+entries, and unknown execution names are typed failures; they do not select
+another operation. Runtime libraries are packaged beside the worker; they are
+not discovered through an uncontrolled system search path.
 
 ## Resource ownership
 

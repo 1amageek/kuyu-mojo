@@ -27,5 +27,6 @@ public enum MojoAcceleratorRuntimeError: Error, Sendable, Equatable {
     required: MojoSessionCapability,
     available: MojoSessionCapability
   )
+  case unavailableExecutionFunction(String)
   case invocationFailed(status: Int32)
 }

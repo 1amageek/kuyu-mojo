@@ -12,7 +12,9 @@ public struct MojoAcceleratorRuntimeBundleRequirement: Sendable, Equatable {
     case invalidAccelerator(String)
     case invalidModuleName(String)
     case invalidSessionFactoryFunctionName(String)
+    case emptyExecutionFunctionNames
     case invalidExecutionFunctionName(String)
+    case duplicateExecutionFunctionName(String)
     case identicalBindingFunctionNames(String)
   }
 
@@ -24,7 +26,11 @@ public struct MojoAcceleratorRuntimeBundleRequirement: Sendable, Equatable {
   public let inputGraphDigest: String
   public let inputGraphIdentifier: UInt64
   public let sessionFactoryFunctionName: String
-  public let executionFunctionName: String
+  public let executionFunctionNames: [String]
+
+  public var executionFunctionName: String {
+    executionFunctionNames[0]
+  }
 
   public init(
     schemaVersion: Int = 3,
@@ -36,6 +42,30 @@ public struct MojoAcceleratorRuntimeBundleRequirement: Sendable, Equatable {
     inputGraphIdentifier: UInt64,
     sessionFactoryFunctionName: String,
     executionFunctionName: String
+  ) throws {
+    try self.init(
+      schemaVersion: schemaVersion,
+      bundleDigest: bundleDigest,
+      receiptDigest: receiptDigest,
+      target: target,
+      moduleName: moduleName,
+      inputGraphDigest: inputGraphDigest,
+      inputGraphIdentifier: inputGraphIdentifier,
+      sessionFactoryFunctionName: sessionFactoryFunctionName,
+      executionFunctionNames: [executionFunctionName]
+    )
+  }
+
+  public init(
+    schemaVersion: Int = 3,
+    bundleDigest: String,
+    receiptDigest: String,
+    target: MojoRuntimeBundleTarget,
+    moduleName: String,
+    inputGraphDigest: String,
+    inputGraphIdentifier: UInt64,
+    sessionFactoryFunctionName: String,
+    executionFunctionNames: [String]
   ) throws {
     guard schemaVersion > 0 else {
       throw ValidationError.invalidSchemaVersion(schemaVersion)
@@ -69,15 +99,27 @@ public struct MojoAcceleratorRuntimeBundleRequirement: Sendable, Equatable {
         sessionFactoryFunctionName
       )
     }
-    guard Self.isPortableIdentifier(executionFunctionName) else {
-      throw ValidationError.invalidExecutionFunctionName(
-        executionFunctionName
-      )
+    guard !executionFunctionNames.isEmpty else {
+      throw ValidationError.emptyExecutionFunctionNames
     }
-    guard sessionFactoryFunctionName != executionFunctionName else {
-      throw ValidationError.identicalBindingFunctionNames(
-        sessionFactoryFunctionName
-      )
+    var uniqueExecutionFunctionNames: Set<String> = []
+    for executionFunctionName in executionFunctionNames {
+      guard Self.isPortableIdentifier(executionFunctionName) else {
+        throw ValidationError.invalidExecutionFunctionName(
+          executionFunctionName
+        )
+      }
+      guard executionFunctionName != sessionFactoryFunctionName else {
+        throw ValidationError.identicalBindingFunctionNames(
+          sessionFactoryFunctionName
+        )
+      }
+      guard uniqueExecutionFunctionNames.insert(executionFunctionName).inserted
+      else {
+        throw ValidationError.duplicateExecutionFunctionName(
+          executionFunctionName
+        )
+      }
     }
 
     self.schemaVersion = schemaVersion
@@ -88,7 +130,7 @@ public struct MojoAcceleratorRuntimeBundleRequirement: Sendable, Equatable {
     self.inputGraphDigest = inputGraphDigest
     self.inputGraphIdentifier = inputGraphIdentifier
     self.sessionFactoryFunctionName = sessionFactoryFunctionName
-    self.executionFunctionName = executionFunctionName
+    self.executionFunctionNames = executionFunctionNames
   }
 
   private static func isSHA256Digest(_ value: String) -> Bool {

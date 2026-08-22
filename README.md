@@ -86,8 +86,11 @@ the schema, bundle and receipt digests, target, module, input graph, generated
 header, managed tree, loader policy, and the typed session-factory/execution
 binding relationship pass validation. `KuyuMojoAcceleratorRuntime` then loads
 only the verified dylib, checks its static ABI, graph identity, and binding IDs,
-and retains the loader image for every session borrow. It never selects CPU as
-a fallback. The generated Metal session library and its exact four-library
+and retains the loader image for every session borrow. One factory may own an
+ordered set of named execution bindings; the first remains the default for
+single-operation bundles, while unknown names and duplicate names or binding
+IDs fail without selecting another operation or CPU fallback. The generated
+Metal session library and its exact four-library
 AsyncRT/KGEN closure produce receipt
 `3969ad6b6d12dd2416aa745bdc4037ad2faba85bd24b34d0abd3d5eb1c8be747`
 and bundle

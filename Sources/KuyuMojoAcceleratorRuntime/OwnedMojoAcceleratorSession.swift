@@ -1,22 +1,29 @@
 import Foundation
 @_spi(SwiftMojoGenerated) import Mojo
+import MojoRuntime
 
 final class OwnedMojoAcceleratorSession: MojoAcceleratorSession, Sendable {
   private let owner: MojoSessionOwner
   private let abi: MojoAcceleratorDynamicABI
   private let sessionDomainID: UInt64
-  private let executionBindingID: UInt64
+  let executionFunctionNames: [String]
+  private let executionBindingIDs: [String: UInt64]
 
   init(
     owner: MojoSessionOwner,
     abi: MojoAcceleratorDynamicABI,
     sessionDomainID: UInt64,
-    executionBindingID: UInt64
+    executionBindings: [MojoRuntimeLibraryBinding]
   ) {
     self.owner = owner
     self.abi = abi
     self.sessionDomainID = sessionDomainID
-    self.executionBindingID = executionBindingID
+    self.executionFunctionNames = executionBindings.map(\.functionName)
+    self.executionBindingIDs = Dictionary(
+      uniqueKeysWithValues: executionBindings.map {
+        ($0.functionName, $0.bindingID)
+      }
+    )
   }
 
   var capabilities: MojoSessionCapabilities {
@@ -31,6 +38,23 @@ final class OwnedMojoAcceleratorSession: MojoAcceleratorSession, Sendable {
     request: borrowing [Float],
     into output: inout [Float]
   ) throws {
+    try execute(
+      functionName: executionFunctionNames[0],
+      request: request,
+      into: &output
+    )
+  }
+
+  func execute(
+    functionName: String,
+    request: borrowing [Float],
+    into output: inout [Float]
+  ) throws {
+    guard let executionBindingID = executionBindingIDs[functionName] else {
+      throw MojoAcceleratorRuntimeError.unavailableExecutionFunction(
+        functionName
+      )
+    }
     try autoreleasepool {
       try owner.withOpaqueHandle(
         expectedSessionDomainID: sessionDomainID

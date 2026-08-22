@@ -16,7 +16,7 @@ struct DynamicMojoAcceleratorRuntimeTests {
   @Test(.timeLimit(.minutes(1)))
   func ownsSessionExecutesRepeatedlyAndShutsDownInOrder() throws {
     try Fixture.withFixture { fixture in
-      let runtime = try fixture.load(fixture.bundle())
+      let runtime = try fixture.load(try fixture.bundle())
       let session = try runtime.makeSession(
         requirements: Fixture.requirements
       )
@@ -47,7 +47,7 @@ struct DynamicMojoAcceleratorRuntimeTests {
   @Test(.timeLimit(.minutes(1)))
   func reportsInvocationFailureAndUseAfterShutdown() throws {
     try Fixture.withFixture { fixture in
-      let runtime = try fixture.load(fixture.bundle())
+      let runtime = try fixture.load(try fixture.bundle())
       let session = try runtime.makeSession(
         requirements: Fixture.requirements
       )
@@ -81,13 +81,32 @@ struct DynamicMojoAcceleratorRuntimeTests {
           MojoAcceleratorRuntimeError
           .inputGraphIdentifierMismatch(expected: 99, actual: 42)
       ) {
-        let bundle = fixture.bundle(inputGraphIdentifier: 99)
+        let bundle = try fixture.bundle(inputGraphIdentifier: 99)
         _ = try fixture.load(bundle)
       }
       #expect(
         throws: MojoAcceleratorRuntimeError.unavailableBinding(99)
       ) {
-        let bundle = fixture.bundle(executionBindingID: 99)
+        let bundle = try fixture.bundle(executionBindingID: 99)
+        _ = try fixture.load(bundle)
+      }
+      #expect(
+        throws:
+          MojoAcceleratorRuntimeError.runtimeBindingIdentityMismatch
+      ) {
+        let bundle = try fixture.bundle(
+          includeSecondaryExecution: true,
+          secondaryExecutionBindingID: Fixture.executionBindingID
+        )
+        _ = try fixture.load(bundle)
+      }
+      #expect(
+        throws:
+          MojoAcceleratorRuntimeError.runtimeBindingIdentityMismatch
+      ) {
+        let bundle = try fixture.bundle(
+          factoryBindingID: Fixture.executionBindingID
+        )
         _ = try fixture.load(bundle)
       }
     }
@@ -96,7 +115,7 @@ struct DynamicMojoAcceleratorRuntimeTests {
   @Test(.timeLimit(.minutes(1)))
   func rejectsUnverifiedOrDriftedMetadataBeforeDynamicLoading() throws {
     try Fixture.withFixture { fixture in
-      let bundle = fixture.bundle()
+      let bundle = try fixture.bundle()
       let verificationError =
         MojoRuntimeBundleVerificationError
         .invalidBundle("fixture verification failed")
@@ -119,7 +138,7 @@ struct DynamicMojoAcceleratorRuntimeTests {
         _ = try DynamicMojoAcceleratorRuntimeLoader(
           runtimeVerifier: FixtureRuntimeVerifier(
             outcome: .success(
-              fixture.bundle(inputGraphIdentifier: 99).verification
+              try fixture.bundle(inputGraphIdentifier: 99).verification
             )
           )
         ).load(bundle)
@@ -131,7 +150,9 @@ struct DynamicMojoAcceleratorRuntimeTests {
   func rejectsShutdownAndReentryAcrossConcurrentForeignCalls() async throws {
     try await Fixture.withAsyncFixture { fixture in
       let controls = try FixtureControls(libraryURL: fixture.libraryURL)
-      let runtime = try fixture.load(fixture.bundle())
+      let runtime = try fixture.load(
+        try fixture.bundle(includeSecondaryExecution: true)
+      )
 
       controls.blockNextCreation()
       let creation = Task {
@@ -153,7 +174,11 @@ struct DynamicMojoAcceleratorRuntimeTests {
       controls.blockNextInvocation()
       let invocation = Task<[Float], Error> {
         var output = [Float](repeating: 0, count: 2)
-        try session.execute(request: [51, 52], into: &output)
+        try session.execute(
+          functionName: Fixture.secondaryExecutionFunctionName,
+          request: [51, 52],
+          into: &output
+        )
         return output
       }
       defer { controls.releaseInvocation() }
@@ -169,9 +194,53 @@ struct DynamicMojoAcceleratorRuntimeTests {
         try session.shutdown()
       }
       controls.releaseInvocation()
-      #expect(try await invocation.value == [51, 52])
+      #expect(try await invocation.value == [52, 53])
 
       try controls.shutdown()
+      try session.shutdown()
+      try runtime.shutdown()
+    }
+  }
+
+  @Test(.timeLimit(.minutes(1)))
+  func routesNamedExecutionBindingsWithoutFallback() throws {
+    try Fixture.withFixture { fixture in
+      let runtime = try fixture.load(
+        try fixture.bundle(includeSecondaryExecution: true)
+      )
+      let session = try runtime.makeSession(
+        requirements: Fixture.requirements
+      )
+
+      #expect(
+        session.executionFunctionNames == [
+          "executeBatch",
+          Fixture.secondaryExecutionFunctionName,
+        ]
+      )
+      var output = [Float](repeating: 0, count: 2)
+      try session.execute(request: [41, 42], into: &output)
+      #expect(output == [41, 42])
+      try session.execute(
+        functionName: Fixture.secondaryExecutionFunctionName,
+        request: [41, 42],
+        into: &output
+      )
+      #expect(output == [42, 43])
+
+      #expect(
+        throws:
+          MojoAcceleratorRuntimeError
+          .unavailableExecutionFunction("missingExecution")
+      ) {
+        try session.execute(
+          functionName: "missingExecution",
+          request: [51, 52],
+          into: &output
+        )
+      }
+      #expect(output == [42, 43])
+
       try session.shutdown()
       try runtime.shutdown()
     }
@@ -239,6 +308,8 @@ struct DynamicMojoAcceleratorRuntimeTests {
 private struct Fixture {
   static let factoryBindingID: UInt64 = 11
   static let executionBindingID: UInt64 = 12
+  static let secondaryExecutionBindingID: UInt64 = 13
+  static let secondaryExecutionFunctionName = "executeShiftedBatch"
   static let graphIdentifier: UInt64 = 42
   static let requirements = MojoSessionRequirements(
     device: .metal,
@@ -319,10 +390,13 @@ private struct Fixture {
 
   func bundle(
     inputGraphIdentifier: UInt64 = graphIdentifier,
-    executionBindingID: UInt64 = executionBindingID
-  ) -> MojoAcceleratorRuntimeBundle {
+    factoryBindingID: UInt64 = factoryBindingID,
+    executionBindingID: UInt64 = executionBindingID,
+    includeSecondaryExecution: Bool = false,
+    secondaryExecutionBindingID: UInt64 = secondaryExecutionBindingID
+  ) throws -> MojoAcceleratorRuntimeBundle {
     let factory = MojoRuntimeLibraryBinding(
-      bindingID: Self.factoryBindingID,
+      bindingID: factoryBindingID,
       functionName: "createSession",
       signature: .runtimeSessionFactory
     )
@@ -332,6 +406,17 @@ private struct Fixture {
       signature: .sessionBorrowedMutableFloat32Buffers,
       sessionFactoryFunctionName: "createSession"
     )
+    var executions = [execution]
+    if includeSecondaryExecution {
+      executions.append(
+        MojoRuntimeLibraryBinding(
+          bindingID: secondaryExecutionBindingID,
+          functionName: Self.secondaryExecutionFunctionName,
+          signature: .sessionBorrowedMutableFloat32Buffers,
+          sessionFactoryFunctionName: "createSession"
+        )
+      )
+    }
     let verification = MojoRuntimeLibraryBundleVerification(
       schemaVersion: 3,
       bundleDigest: String(repeating: "a", count: 64),
@@ -347,7 +432,7 @@ private struct Fixture {
       inputGraphIdentifier: inputGraphIdentifier,
       generatedSourceDigest: String(repeating: "d", count: 64),
       sourceMapDigest: String(repeating: "e", count: 64),
-      bindings: [factory, execution],
+      bindings: [factory] + executions,
       loaderSearchPath: "@loader_path",
       library: MojoRuntimeBundleFile(
         relativePath: libraryURL.lastPathComponent,
@@ -365,11 +450,11 @@ private struct Fixture {
       exportedSymbols: Self.exports,
       systemDependencies: ["/usr/lib/libSystem.B.dylib"]
     )
-    return MojoAcceleratorRuntimeBundle(
+    return try MojoAcceleratorRuntimeBundle(
       rootURL: rootURL,
       libraryURL: libraryURL,
       sessionFactoryBinding: factory,
-      executionBinding: execution,
+      executionBindings: executions,
       verification: verification
     )
   }
@@ -469,7 +554,7 @@ private struct Fixture {
     }
 
     uint32_t swift_mojo_fixture_has_binding(uint64_t binding_id) {
-        return binding_id == 11 || binding_id == 12;
+        return binding_id == 11 || binding_id == 12 || binding_id == 13;
     }
 
     int32_t swift_mojo_fixture_create_session_v1(
@@ -526,7 +611,7 @@ private struct Fixture {
         uint64_t output_count
     ) {
         FixtureSession *typed_session = session;
-        if (binding_id != 12 || typed_session == NULL
+        if ((binding_id != 12 && binding_id != 13) || typed_session == NULL
             || typed_session->marker != 4937050
             || input_count != output_count) {
             return 20;
@@ -538,7 +623,7 @@ private struct Fixture {
             }
         }
         for (uint64_t index = 0; index < input_count; ++index) {
-            output[index] = input[index];
+            output[index] = input[index] + (binding_id == 13 ? 1.0f : 0.0f);
         }
         return 0;
     }

@@ -121,31 +121,32 @@ public struct FileSystemMojoAcceleratorRuntimeBundlePreflight:
           requirement.sessionFactoryFunctionName
         )
     }
-    let executions = verification.bindings.filter {
-      $0.functionName == requirement.executionFunctionName
-        && $0.signature
-          == .sessionBorrowedMutableFloat32Buffers
-        && $0.sessionFactoryFunctionName
-          == requirement.sessionFactoryFunctionName
-    }
-    guard executions.count == 1,
-      let execution = executions.first
-    else {
-      throw
-        MojoAcceleratorRuntimeBundlePreflightError
-        .executionBindingMismatch(
-          requirement.executionFunctionName
-        )
+    var executions: [MojoRuntimeLibraryBinding] = []
+    executions.reserveCapacity(requirement.executionFunctionNames.count)
+    for functionName in requirement.executionFunctionNames {
+      let matches = verification.bindings.filter {
+        $0.functionName == functionName
+          && $0.signature
+            == .sessionBorrowedMutableFloat32Buffers
+          && $0.sessionFactoryFunctionName
+            == requirement.sessionFactoryFunctionName
+      }
+      guard matches.count == 1, let execution = matches.first else {
+        throw
+          MojoAcceleratorRuntimeBundlePreflightError
+          .executionBindingMismatch(functionName)
+      }
+      executions.append(execution)
     }
 
-    return MojoAcceleratorRuntimeBundle(
+    return try MojoAcceleratorRuntimeBundle(
       rootURL: rootURL,
       libraryURL: rootURL.appendingPathComponent(
         libraryRelativePath,
         isDirectory: false
       ),
       sessionFactoryBinding: sessionFactory,
-      executionBinding: execution,
+      executionBindings: executions,
       verification: verification
     )
   }

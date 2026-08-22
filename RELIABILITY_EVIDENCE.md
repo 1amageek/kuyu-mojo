@@ -1,5 +1,20 @@
 # Reliability evidence
 
+## 2026-08-23 ordered accelerator session operations
+
+| Claim | Evidence | Result |
+|---|---|---|
+| One persistent Mojo session can expose multiple product-level operations | The bundle requirement and preflight accept a nonempty ordered list of unique execution function names, require every binding to use the session-buffer signature and the same factory, and preserve requested order into the loaded session | Core tests admitted two execution bindings in reversed manifest order and retained the required order; empty and duplicate requirements failed as typed validation errors |
+| Runtime dispatch cannot silently select the wrong operation | `DynamicMojoAcceleratorRuntimeLoader` rechecks unique function names and binding IDs against fresh verification and generated ABI availability; `OwnedMojoAcceleratorSession` maps an explicit name to its immutable binding ID | A two-operation C ABI fixture returned distinct results for IDs 12 and 13; an unknown name preserved the caller's output and returned `unavailableExecutionFunction`, while a duplicate ID returned `runtimeBindingIdentityMismatch` |
+| All named operations share one lifetime and concurrency boundary | Named and default calls both borrow the same `MojoSessionOwner`; the deterministic foreign-call fixture blocked the secondary operation while a default call and shutdown competed | Both competing operations returned `MojoSessionError.busy`; releasing the call permitted ordered session and library shutdown |
+| Existing single-operation Metal bundles remain executable | The exact Mojo 1.0.0 pixi environment regenerated schema-3 bundle `2e89bda4bc15fb935f5df9cb1a43f029336653ef095bea62d60076dbb3d84f99`; public preflight and the changed dynamic loader then created one Apple M4 Metal session and executed two requests | The strict package run passed 58 tests / 59 runs, including 6 Core and 7 runtime tests, with failure 0 and skip 0; real Metal returned `[41, 42]` then `[43, 44]` at `/tmp/kuyu-mojo-multibinding-full-dd/Logs/Test/Test-kuyu-mojo-Package-2026.08.23_01-26-58-+0900.xcresult` |
+
+This slice generalizes the verified runtime boundary required by transactional
+optimizer proposal, commit, discard, read, and checkpoint operations. The
+current accepted dynamics bundle still contains one execution binding; an
+accelerator-resident Adam implementation and its Metal/CUDA artifacts remain a
+separate implementation gate.
+
 ## 2026-08-22 schema-3 callable accelerator session
 
 | Claim | Evidence | Result |

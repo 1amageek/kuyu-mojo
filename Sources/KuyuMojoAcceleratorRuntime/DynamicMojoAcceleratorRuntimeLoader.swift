@@ -60,14 +60,15 @@ public struct DynamicMojoAcceleratorRuntimeLoader:
       )
     }
     let factory = bundle.sessionFactoryBinding
-    let execution = bundle.executionBinding
     guard
       factory.signature == .runtimeSessionFactory,
       factory.sessionFactoryFunctionName == nil,
-      execution.signature == .sessionBorrowedMutableFloat32Buffers,
-      execution.sessionFactoryFunctionName == factory.functionName,
       verification.bindings.filter({ $0 == factory }).count == 1,
-      verification.bindings.filter({ $0 == execution }).count == 1
+      Self.hasValidExecutionBindings(
+        bundle.executionBindings,
+        factory: factory,
+        verification: verification
+      )
     else {
       throw MojoAcceleratorRuntimeError.runtimeBindingIdentityMismatch
     }
@@ -108,10 +109,10 @@ public struct DynamicMojoAcceleratorRuntimeLoader:
             actual: graphIdentifier
           )
       }
-      for bindingID in [
-        bundle.sessionFactoryBinding.bindingID,
-        bundle.executionBinding.bindingID,
-      ] where abi.hasBinding(bindingID) != 1 {
+      let bindingIDs =
+        [bundle.sessionFactoryBinding.bindingID]
+        + bundle.executionBindings.map(\.bindingID)
+      for bindingID in bindingIDs where abi.hasBinding(bindingID) != 1 {
         throw MojoAcceleratorRuntimeError.unavailableBinding(bindingID)
       }
       return OwnedMojoAcceleratorRuntimeLibrary(
@@ -119,7 +120,7 @@ public struct DynamicMojoAcceleratorRuntimeLoader:
         abi: abi,
         sessionFactoryBindingID:
           bundle.sessionFactoryBinding.bindingID,
-        executionBindingID: bundle.executionBinding.bindingID
+        executionBindings: bundle.executionBindings
       )
     } catch {
       _ = dlclose(handle)
@@ -132,6 +133,30 @@ public struct DynamicMojoAcceleratorRuntimeLoader:
       return "dynamic loader returned no diagnostic"
     }
     return String(cString: error)
+  }
+
+  private static func hasValidExecutionBindings(
+    _ executions: [MojoRuntimeLibraryBinding],
+    factory: MojoRuntimeLibraryBinding,
+    verification: MojoRuntimeLibraryBundleVerification
+  ) -> Bool {
+    guard !executions.isEmpty else {
+      return false
+    }
+    var functionNames: Set<String> = [factory.functionName]
+    var bindingIDs: Set<UInt64> = [factory.bindingID]
+    for execution in executions {
+      guard
+        execution.signature == .sessionBorrowedMutableFloat32Buffers,
+        execution.sessionFactoryFunctionName == factory.functionName,
+        functionNames.insert(execution.functionName).inserted,
+        bindingIDs.insert(execution.bindingID).inserted,
+        verification.bindings.filter({ $0 == execution }).count == 1
+      else {
+        return false
+      }
+    }
+    return true
   }
 
   private static func isSafeRelativePath(_ path: String) -> Bool {

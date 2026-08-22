@@ -35,6 +35,78 @@ struct MojoAcceleratorRuntimeBundlePreflightTests {
   }
 
   @Test(.timeLimit(.minutes(1)))
+  func admitsMultipleExecutionBindingsInRequiredOrder() throws {
+    let secondary = MojoRuntimeLibraryBinding(
+      bindingID: 13,
+      functionName: Self.secondaryExecutionFunctionName,
+      signature: .sessionBorrowedMutableFloat32Buffers,
+      sessionFactoryFunctionName: Self.factoryFunctionName
+    )
+    let verification = Self.verification(
+      additionalBindings: [secondary]
+    )
+    let requirement = try Self.requirement(
+      executionFunctionNames: [
+        Self.secondaryExecutionFunctionName,
+        Self.executionFunctionName,
+      ]
+    )
+
+    let bundle = try FileSystemMojoAcceleratorRuntimeBundlePreflight(
+      runtimeVerifier: StubLibraryVerifier(.success(verification))
+    ).validatedRuntimeBundle(
+      at: URL(fileURLWithPath: "/tmp/runtime", isDirectory: true),
+      requiring: requirement
+    )
+
+    #expect(
+      bundle.executionBindings.map(\.functionName) == [
+        Self.secondaryExecutionFunctionName,
+        Self.executionFunctionName,
+      ]
+    )
+    #expect(bundle.executionBindings.map(\.bindingID) == [13, 12])
+  }
+
+  @Test(.timeLimit(.minutes(1)))
+  func rejectsEmptyOrDuplicateExecutionRequirements() throws {
+    #expect(
+      throws:
+        MojoAcceleratorRuntimeBundleRequirement.ValidationError
+        .emptyExecutionFunctionNames
+    ) {
+      _ = try Self.requirement(executionFunctionNames: [])
+    }
+    #expect(
+      throws:
+        MojoAcceleratorRuntimeBundleRequirement.ValidationError
+        .duplicateExecutionFunctionName(Self.executionFunctionName)
+    ) {
+      _ = try Self.requirement(
+        executionFunctionNames: [
+          Self.executionFunctionName,
+          Self.executionFunctionName,
+        ]
+      )
+    }
+
+    let verification = Self.verification()
+    #expect(
+      throws:
+        MojoAcceleratorRuntimeBundle.ValidationError
+        .emptyExecutionBindings
+    ) {
+      _ = try MojoAcceleratorRuntimeBundle(
+        rootURL: URL(fileURLWithPath: "/tmp/runtime", isDirectory: true),
+        libraryURL: URL(fileURLWithPath: "/tmp/runtime/lib/runtime.dylib"),
+        sessionFactoryBinding: verification.bindings[0],
+        executionBindings: [],
+        verification: verification
+      )
+    }
+  }
+
+  @Test(.timeLimit(.minutes(1)))
   func rejectsIdentityAndBindingRelationshipDrift() throws {
     let requirement = try Self.requirement()
     let rootURL = URL(fileURLWithPath: "/tmp/runtime", isDirectory: true)
@@ -142,6 +214,7 @@ struct MojoAcceleratorRuntimeBundlePreflightTests {
   private static let moduleName = "SwiftMojo_KuyuAccelerator_ABI"
   private static let factoryFunctionName = "createKuyuSession"
   private static let executionFunctionName = "executeKuyuBatch"
+  private static let secondaryExecutionFunctionName = "commitKuyuBatch"
   private static let libraryRelativePath =
     "lib/libSwiftMojo_KuyuAccelerator_ABI.dylib"
   private static let target = MojoRuntimeBundleTarget(
@@ -162,6 +235,21 @@ struct MojoAcceleratorRuntimeBundlePreflightTests {
       inputGraphIdentifier: 42,
       sessionFactoryFunctionName: factoryFunctionName,
       executionFunctionName: executionFunctionName
+    )
+  }
+
+  private static func requirement(
+    executionFunctionNames: [String]
+  ) throws -> MojoAcceleratorRuntimeBundleRequirement {
+    try MojoAcceleratorRuntimeBundleRequirement(
+      bundleDigest: bundleDigest,
+      receiptDigest: receiptDigest,
+      target: target,
+      moduleName: moduleName,
+      inputGraphDigest: inputGraphDigest,
+      inputGraphIdentifier: 42,
+      sessionFactoryFunctionName: factoryFunctionName,
+      executionFunctionNames: executionFunctionNames
     )
   }
 
@@ -192,7 +280,8 @@ struct MojoAcceleratorRuntimeBundlePreflightTests {
     bundleDigest: String = bundleDigest,
     inputGraphIdentifier: UInt64 = 42,
     executionFactoryName: String = factoryFunctionName,
-    libraryRelativePath: String = libraryRelativePath
+    libraryRelativePath: String = libraryRelativePath,
+    additionalBindings: [MojoRuntimeLibraryBinding] = []
   ) -> MojoRuntimeLibraryBundleVerification {
     MojoRuntimeLibraryBundleVerification(
       schemaVersion: schemaVersion,
@@ -217,7 +306,7 @@ struct MojoAcceleratorRuntimeBundlePreflightTests {
           signature: .sessionBorrowedMutableFloat32Buffers,
           sessionFactoryFunctionName: executionFactoryName
         ),
-      ],
+      ] + additionalBindings,
       loaderSearchPath: "@loader_path",
       library: MojoRuntimeBundleFile(
         relativePath: libraryRelativePath,
