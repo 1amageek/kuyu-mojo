@@ -4,6 +4,19 @@ Portable Mojo compute backends for Kuyu. KuyuPhysics owns canonical dynamics
 semantics; this package compiles and executes those programs without defining a
 second set of equations.
 
+## Production Direction
+
+Mojo 1.0.0 is the sole production compute substrate. Models, inference,
+automatic differentiation, rollout tensor execution, GAE/PPO/SHAC, optimizer
+arithmetic, and learned world-model compute are implemented in Mojo. Swift
+consumes them through `swift-mojo` and typed Kuyu/Manas adapters; Swift does not
+contain a parallel tensor or training implementation.
+
+MLX is not a fallback, compatibility backend, differential reference, test
+oracle, or deployment option. Missing Mojo capabilities fail explicitly. The
+complete Mojo reinforcement and world-model products remain implementation
+gaps, but those gaps do not authorize retaining MLX execution.
+
 ```text
 CanonicalDynamicsProgram
     -> KuyuMojoProgramCompiler
