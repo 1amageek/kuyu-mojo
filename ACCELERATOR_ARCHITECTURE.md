@@ -65,9 +65,39 @@ flowchart LR
 The worker boundary isolates accelerator faults and dynamic runtime deployment
 from the application while preserving the Kuyu worker lifecycle already
 defined by `kuyu/SPEC.md`. A local macOS worker and a remote Jetson worker use
-the same typed request/result contract. Transport, authentication, progress
-journaling, cancellation, and accepted-artifact publication remain owned by
-the Kuyu runtime rather than the compute backend.
+the same admission, identity, lifecycle, and failure envelopes, but not the
+same workload role. The macOS worker owns training. The Jetson worker owns
+accepted-artifact inference, real-time control, and HIL execution and MUST NOT
+be selected as a remote optimizer fallback. Transport, authentication,
+progress journaling, cancellation, and accepted-artifact publication remain
+owned by the Kuyu runtime rather than the compute backend.
+
+## Platform roles and training optimization
+
+```mermaid
+flowchart LR
+  Mac["Mac16,6 / M4 Max\nPrimary Mojo training worker"]
+  Session["Attempt-owned device-resident session\nrollout + GAE + autodiff + update"]
+  Artifact["Accepted immutable model artifact"]
+  Jetson["Jetson AGX Orin\ninference + control + HIL"]
+
+  Mac --> Session
+  Session --> Artifact
+  Artifact --> Jetson
+```
+
+Mac training is optimized as one session, not as isolated kernels. Model
+parameters, rollout tensors, recurrent state, gradients, optimizer moments,
+rollback state, and finite-reduction intermediates remain under one Mojo/MAX
+device-context lifetime. The implementation specializes layouts, tiles, and
+fused kernels for the accepted artifact and batch-shape class. It materializes
+only bounded progress/evidence summaries and coarse checkpoint exports.
+
+Promotion evidence records end-to-end and per-stage elapsed time, environment
+steps/second, samples/second, updates/second, warm p50/p95 update latency,
+host-transfer bytes, synchronization count, peak/sustained memory, and sustained
+thermal state. A full-vector host transfer per control step or update is a gate
+failure even when wall-clock time improves.
 
 ## Numeric contract
 
@@ -144,8 +174,8 @@ not discovered through an uncontrolled system search path.
 | Device | Real Apple GPU context and kernel execution in original and relocated workers | Real Orin `sm_87` context |
 | Numeric | CPU/Metal Float32 differential passed all outputs for 11 graphs × 2 scenarios; Float64 Metal is rejected as a typed compile failure | Float32 kernel; declared capability negotiation |
 | Behavior | Canonical transfer, kernel execution, synchronization, original execution, and relocated execution passed; malformed-device-input tests and production shutdown remain | Same plus native Jetson link/run and PTX/SASS target inspection |
-| Performance | Batch throughput and transfer budget | Batch throughput, thermal stability, and sustained-power budget |
-| Safety | Cancellation and worker crash tombstone | Same plus hardware-in-the-loop control boundary |
+| Performance | Complete training-session rates, warm latency percentiles, transfer/synchronization budget, peak memory, and sustained thermal stability on the designated Mac | Inference and control-loop latency, memory, power, and sustained deployment thermal budget; no optimizer-throughput comparison |
+| Safety | Cancellation, rollback, and worker crash tombstone | Cancellation/shutdown plus hardware-in-the-loop control boundary |
 
 Cross-compilation, a device query, or successful process exit alone does not
 complete an accelerator gate.

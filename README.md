@@ -17,6 +17,18 @@ oracle, or deployment option. Missing Mojo capabilities fail explicitly. The
 complete Mojo reinforcement and world-model products remain implementation
 gaps, but those gaps do not authorize retaining MLX execution.
 
+## Platform Roles
+
+The designated MacBook M4 Max is the primary training, evaluation, benchmark,
+and checkpoint-publication platform. `kuyu-mojo` optimizes the whole training
+session there: model execution, rollout tensors, GAE, autodiff, losses,
+optimizer state, rollback, reductions, and checkpoint export.
+
+Jetson AGX Orin consumes accepted artifacts for inference, real-time control,
+and HIL/robot verification. Native Jetson artifact acceptance remains required
+for robot deployment, but Jetson optimizer throughput is not a training gate
+and Jetson is not a remote training fallback.
+
 ```text
 CanonicalDynamicsProgram
     -> KuyuMojoProgramCompiler
