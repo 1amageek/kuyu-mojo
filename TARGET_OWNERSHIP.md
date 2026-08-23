@@ -4,6 +4,8 @@
 |---|---|---|
 | `KuyuMojoCore` | Execution identity, numeric type, and CPU/accelerator class | Vendor backend selection, physics equations, scenarios, training plans, fallback policy |
 | `KuyuMojoDynamics` | Canonical-program compilation and deterministic Mojo CPU Float64/Float32 execution | Canonical equation definition, scenario selection, reward/failure semantics |
+| `KuyuManasMojoAdapter` | KuyuDataset v7 validation, Kuyu-to-Manas trajectory conversion, training-session composition, and ordered lifecycle | Manas model equations, GAE/PPO/BPTT/optimizer arithmetic, checkpoint promotion policy, numerical fallback |
+| `KuyuMojoTrainingRuntime` | Verification and staging of attempt-owned Mojo worker/runtime bundles | Scenario truth, model mathematics, worker implementation, artifact promotion |
 
 `KuyuPhysics` remains the sole authority for opcodes, layouts, units,
 differentiability, force terms, integration declarations, and program digests.

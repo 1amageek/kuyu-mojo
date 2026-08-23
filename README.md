@@ -14,8 +14,10 @@ contain a parallel tensor or training implementation.
 
 MLX is not a fallback, compatibility backend, differential reference, test
 oracle, or deployment option. Missing Mojo capabilities fail explicitly. The
-complete Mojo reinforcement and world-model products remain implementation
-gaps, but those gaps do not authorize retaining MLX execution.
+complete Manas PPO learning session is available through the typed Kuyu
+adapter. Generic campaign/worker integration, accelerator-resident PPO, learned
+world-model products, and native Jetson deployment remain implementation or
+qualification gaps; those gaps do not authorize retaining MLX execution.
 
 ## Platform Roles
 
@@ -148,7 +150,20 @@ injected `ManasLearningInputEncoding`, enforces transition and complete Float
 scalar budgets, and returns an immutable validated `ManasOnPolicyTrajectory`.
 The exact verifier is owned by the adapter and cannot be replaced by a caller.
 The direct-coordinate encoder requires explicit contract digests and rejects
-lossy `Double`-to-`Float` conversion. The same target provides
+lossy `Double`-to-`Float` conversion.
+
+`KuyuManasMojoTrainingRun` composes that conversion with a
+`ManasMojoPPOTrainingSession`. One attempt loads the validated dataset, creates
+one Mojo session, executes PPO, snapshots an immutable checkpoint, and performs
+ordered shutdown on both success and failure. Kuyu does not implement tensor
+math: the Manas Mojo session owns exact Core forward execution, reward/cost
+GAE, transformed-action PPO, recurrent BPTT, gradient clipping, Adam, the
+Lagrange multiplier, transaction state, and checkpoint bytes. On the designated
+M4 Max, the representative 69,323-parameter, 32-transition session measures
+about 2.9 ms per update after initialization and has an executable 10 ms
+regression budget.
+
+The same target also provides
 `KuyuManasMojoAdamOptimizerSessionFactory`, which admits only a digest-verified
 accelerator bundle whose ordered operation set exactly matches Manas' public
 Adam ABI. It always requests the backend-neutral `.accelerator` device class;

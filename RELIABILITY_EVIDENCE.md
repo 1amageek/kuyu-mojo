@@ -1,5 +1,19 @@
 # Reliability evidence
 
+## 2026-08-23 complete Manas PPO training through Kuyu
+
+| Claim | Evidence | Result |
+|---|---|---|
+| Kuyu executes the real Manas Mojo learning path without owning model mathematics | `KuyuManasMojoTrainingRun` converts one digest-validated KuyuDataset v7 artifact through `KuyuDatasetManasLearningAdapter`, creates `ManasMojoPPOTrainingSession`, performs the update, snapshots the checkpoint, and shuts down in order | The full `kuyu-mojo-Package` scheme passed 70 tests with zero failures or skips at `/Users/1amageek/Library/Developer/Xcode/DerivedData/kuyu-mojo-ermfutvxklhjkhfvlwksygiupozt/Logs/Test/Test-kuyu-mojo-Package-2026.08.23_17-49-10-+0900.xcresult` |
+| The complete PPO numerical path is Mojo-owned | `Mojo/ManasMojoTraining` executes exact Core forward, transformed Gaussian evidence checks, reward/cost GAE, clipped PPO, full recurrent BPTT, global gradient clipping, Adam, one Lagrange update, and transactional checkpoint state | The independent Mojo math executable passed finite-difference checks for all 45 tiny-model parameters plus GAE, PPO clipping, transformed probability, SIMD buffer tails, and workspace bounds |
+| The M4 Max training hot path has an executable budget | `measuresRepresentativeMojoPPOUpdate()` covers 69,323 parameters and 32 recurrent transitions, with initialization below 100 ms and an update below 10 ms required for success | The focused Xcode run measured 12.05 ms initialization and 2.65 ms/update; the final full Manas scheme passed 145 tests at `/Users/1amageek/Library/Developer/Xcode/DerivedData/manas-cqxwgyvkqnujwkakahjhivwakwuf/Logs/Test/Test-manas-Package-2026.08.23_17-48-46-+0900.xcresult` |
+| Failure cannot publish partial training state or leak the session | Mojo trains in a capped attempt-local shadow workspace and commits only after all epochs succeed; Kuyu's run preserves the operation error, performs shutdown, and reports an aggregate operation/cleanup error if both fail | Transaction, second-generation rejection, checkpoint, operation failure, and shutdown lifecycle fixtures passed; the workspace rejects more than 67,108,864 Float32 elements before allocation |
+
+This closes the Mac CPU SIMD PPO session and Kuyu composition slice. Generic
+campaign/worker integration, multi-update rollout collection, golden learned
+improvement, accelerator-resident PPO, sustained thermal profiling, and native
+Jetson inference/HIL acceptance remain separate gates.
+
 ## 2026-08-23 backend-neutral Manas inference transport
 
 | Claim | Evidence | Result |

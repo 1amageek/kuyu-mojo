@@ -1,24 +1,6 @@
 {
-  "originHash" : "036e4d48b2d69bed1cd310f60541d30e4369e0fc96a9e2ee351e26eee62484cb",
+  "originHash" : "2d19ab1b68c75e7115c61cc08780396036848bf5112e3fdab86be8856e6f4a65",
   "pins" : [
-    {
-      "identity" : "mlx-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/ml-explore/mlx-swift",
-      "state" : {
-        "revision" : "0bb916c67f4b9e5c682cbe02a42c701c93ab5021",
-        "version" : "0.31.6"
-      }
-    },
-    {
-      "identity" : "swift-argument-parser",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-argument-parser",
-      "state" : {
-        "revision" : "6a52f3251125d74daf04fcbd5e6f08a75d074382",
-        "version" : "1.8.2"
-      }
-    },
     {
       "identity" : "swift-async-algorithms",
       "kind" : "remoteSourceControl",
@@ -61,15 +43,6 @@
       "location" : "https://github.com/1amageek/swift-mojo.git",
       "state" : {
         "revision" : "d5f58340bdb6c69152a4ad8710dd8c5266b14e90"
-      }
-    },
-    {
-      "identity" : "swift-numerics",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-numerics",
-      "state" : {
-        "revision" : "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
-        "version" : "1.1.1"
       }
     },
     {
