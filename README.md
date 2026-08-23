@@ -156,7 +156,8 @@ the verified artifact carries the concrete deployment target. Its transport
 owns the dynamic session and library, routes opaque
 Float32 payloads without interpreting them, and shuts down the session before
 the runtime. Manas continues to own payload validation, proposal identity,
-transactional commit/discard, and checkpoint semantics. This target imports
+fused updates, transfer telemetry, transactional commit/discard, and checkpoint
+semantics. This target imports
 neither MLX nor MAX and does not own dataset persistence, model structure,
 worker snapshots, or model-store gates.
 
@@ -173,13 +174,21 @@ Core/Reflex kernels and hardware parity remain separate gates.
 
 The Manas-owned device implementation has now passed the first real optimizer
 accelerator gate. Verified Apple deployment bundle
-`daaaaaa311e3a61729ff11368f71c0b95fd0f97273c73069f9c81e03661df161`
+`5ee189b92b7983583bec2b896e6b50f58ecc28df0247fd83fc3b2a9b742c5198`
 was dynamically loaded through this adapter on Apple M4. One persistent Mojo
-session matched the static CPU session after proposal discard and three
-proposal/commit cycles, including directions, metrics, parameters, both moment
-vectors, and update count. This proves semantic accelerator execution on the
-Apple deployment for the Adam slice; it does not prove the complete Mojo RL
-backend, production cutover, sustained performance, or native Jetson execution.
+session matched the static CPU session after proposal discard and three fused
+updates, including metrics, parameters, both moment vectors, and update count.
+An invalid arithmetic update left the complete checkpoint unchanged and the
+same session accepted the next valid update. For 1,048,576 parameters, two
+warm-up updates preceded 12 measured updates at 3.46–3.68 ms per fused update
+versus 389.28–485.37 ms for the
+explicit proposal/commit path, an observed 105.70–140.31× speedup across two
+runs. The fused path reports one
+full-vector host-to-device transfer, zero full-vector device-to-host transfers,
+and two synchronizations. This proves semantic accelerator execution and the
+first hot-path performance slice on Apple; it does not prove the complete Mojo
+RL backend, production cutover, peak memory, sustained thermal behavior, or
+native Jetson execution.
 
 The numerical and failure gates are defined in `PARITY_CONTRACT.md`, with
 executed results in `RELIABILITY_EVIDENCE.md`. The

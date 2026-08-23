@@ -19,28 +19,29 @@ evidence.
 
 | Claim | Evidence | Result |
 |---|---|---|
-| Adam committed state resides behind the accelerator session rather than a CPU fallback | Manas' backend-neutral accelerator source creates one real `DeviceContext`, retains parameter and moment buffers on device, uses separate pending proposal buffers, and validates candidate parameters on GPU before commit | Mojo 1.0.0 compiled schema-3 bundle `daaaaaa311e3a61729ff11368f71c0b95fd0f97273c73069f9c81e03661df161` for `arm64-apple-macosx14.0|apple-m4|metal:4`; the verified session advertised device-memory capability 29 and `.accelerator` |
-| The dynamic Metal trajectory preserves CPU Adam semantics | `executesOptInRealMetalBundleWithCPUParity()` preflights the exact bundle identity, loads it through `KuyuManasMojoAdamOptimizerSessionFactory`, and advances it beside the static Manas CPU session | Proposal plus discard left both states unchanged; three committed steps matched descent directions, metrics, parameters, first moments, second moments, and update count |
-| Artifact drift and runtime failure remain fail closed | The test requirement fixes module, bundle, receipt, input-graph, target, factory, and all six ordered operation names; the Mojo session poisons itself on device/runtime exceptions instead of returning success | The complete adapter target passed 26 tests in 4 suites, including malformed identity, ABI mismatch, initialization cleanup, operation mismatch, and the real Metal path |
-| CPU behavior remains intact after sharing the Adam contract | The regenerated static CPU artifacts ran through the Manas optimizer suite after the common validation/math extraction | 20 tests in 4 suites passed, including MLX differential continuation, checkpoint resume, arithmetic rollback, concurrent serialization, and lifecycle failure |
+| Adam committed state resides behind the accelerator session rather than a CPU fallback | Manas' backend-neutral accelerator source creates one real `DeviceContext`, retains parameter and moment buffers on device, uses separate pending proposal buffers, and validates candidate parameters on GPU before commit | Mojo 1.0.0 compiled and verified schema-3 bundle `5ee189b92b7983583bec2b896e6b50f58ecc28df0247fd83fc3b2a9b742c5198`, receipt `40e9ac97ad5467995bb712a99d1c3aec1162df674cc9de8549b75850f8927f16`, for `arm64-apple-macosx14.0|apple-m4|metal:4`; the verified session advertised device-memory capability 29 and `.accelerator` |
+| The dynamic Metal trajectory preserves CPU Adam semantics and rollback | `executesOptInRealMetalBundleWithCPUParity()` preflights the exact bundle identity, loads it through `KuyuManasMojoAdamOptimizerSessionFactory`, and advances it beside the static Manas CPU session | Proposal plus discard left both states unchanged; three fused updates matched metrics, parameters, first moments, second moments, and update count; an overflowing update preserved the exact checkpoint and the next valid update succeeded |
+| The normal update hot path eliminates full-vector return traffic | `updateManasMojoAdam` performs proposal, bounded device summary, validation, and commit in one ABI call; `ManasMojoAdamUpdateProfile` reports the executed transfer and synchronization counts | Across two runs with 1,048,576 parameters and 12 measured updates after warm-up, fused update was 3.46–3.68 ms/update versus 389.28–485.37 ms/update for explicit proposal/commit, an observed 105.70–140.31× speedup; telemetry was one full-vector H→D, zero full-vector D→H, 512 summary elements D→H, and two synchronizations |
+| Artifact drift and runtime failure remain fail closed | The test requirement fixes module, bundle, receipt, input-graph, target, factory, and all seven ordered operation names; the Mojo session poisons itself on device/runtime exceptions instead of returning success | The Xcode-built adapter bundle passed 30 tests in 5 suites under `xcrun xctest`; the final real Metal parity path ran in 2.55 seconds and the two benchmark invocations ran in 8.98 and 10.62 seconds |
+| CPU behavior remains independent of MLX | The regenerated static CPU artifact uses the same fused payload and is the independent reference in the real Metal parity test; the optimizer test source uses a closed-form Adam fixture rather than an MLX import | CPU and Metal matched across three fused updates. The standalone Manas package test scheme remains blocked by the host Xcode installation's missing Metal Toolchain for unrelated MLX targets; optimizer production build, source parse, and the exercised static CPU path passed |
 
-This is semantic acceptance of one Apple Metal optimizer slice. Latency,
-allocation, sustained memory, complete RR-PPO worker composition, and native
-Jetson CUDA remain separate gates.
+This is semantic and first-stage latency acceptance of one Apple Metal optimizer
+slice. Allocation, peak memory, sustained thermal behavior, complete RR-PPO
+worker composition, and native Jetson inference/control remain separate gates.
 
 ## 2026-08-23 Manas Adam verified-runtime adapter
 
 | Claim | Evidence | Result |
 |---|---|---|
-| Kuyu can provide a verified accelerator session without taking ownership of Adam semantics | `KuyuManasMojoAdamOptimizerSessionFactory` composes the public bundle preflight and dynamic loader with `ManasMojoAdamOptimizerSession`; Kuyu routes the six public operation names but never decodes a payload or creates a proposal token | The focused fixture observed initialization and proposal through the exact Manas ABI, while status 35 returned `proposalAlreadyPending` from Manas |
+| Kuyu can provide a verified accelerator session without taking ownership of Adam semantics | `KuyuManasMojoAdamOptimizerSessionFactory` composes the public bundle preflight and dynamic loader with `ManasMojoAdamOptimizerSession`; Kuyu routes the seven public operation names but never decodes a payload or creates a proposal token | The focused fixture observed initialization and proposal through the exact Manas ABI, while status 35 returned `proposalAlreadyPending` from Manas |
 | Artifact or ABI drift cannot select another backend or operation | Factory construction fixes the Manas session request to `.accelerator` and requires the factory plus ordered execution names to equal `ManasMojoAdamABI`; the runtime session repeats the ordered-name check before Manas initialization | Mismatched manifest operations and mismatched runtime operations failed before optimizer use; the mismatch path released session before runtime |
 | Creation and initialization failures preserve ownership order | Session-creation failure closes the loaded runtime; after a session exists, Manas initialization failure closes the transport, which shuts down session before library | Status 23 returned `invalidInitialState`; lifecycle observations were exactly `session.shutdown`, then `runtime.shutdown`; failed creation observed runtime shutdown only |
-| Existing Kuyu/Manas adaptation remains intact | arm64 `xcodebuild build` completed the production adapter target; the complete `KuyuManasMojoAdapterTests` target exercised the new factory alongside dataset and on-policy conversion | 25 tests in 4 suites passed with failure 0 at `/tmp/kuyu-mojo-adam-adapter-dd/Logs/Test/Test-kuyu-mojo-Package-2026.08.23_01-54-41-+0900.xcresult` |
+| Existing Kuyu/Manas adaptation remains intact | arm64 `xcodebuild build` completed the production adapter target; the complete `KuyuManasMojoAdapterTests` target exercised the new factory alongside dataset and on-policy conversion | The final Xcode-built test bundle passed 30 tests in 5 suites with zero failures under the Swift 6.4 snapshot runtime |
 
-This slice closes the typed Swift ownership and routing seam. It does not claim
-device-resident Adam execution: the Manas-owned accelerator Mojo source, its
-schema-3 bundles, real Metal parity, and native Jetson CUDA evidence remain
-separate gates.
+At this adapter milestone, the typed Swift ownership and routing seam was
+closed, while device-resident Adam remained an open gate. The newer section
+above records the later Apple Metal implementation and parity result; native
+Jetson inference/control remains a separate gate.
 
 ## 2026-08-23 ordered accelerator session operations
 
@@ -51,11 +52,11 @@ separate gates.
 | All named operations share one lifetime and concurrency boundary | Named and default calls both borrow the same `MojoSessionOwner`; the deterministic foreign-call fixture blocked the secondary operation while a default call and shutdown competed | Both competing operations returned `MojoSessionError.busy`; releasing the call permitted ordered session and library shutdown |
 | Existing single-operation Metal bundles remain executable | The exact Mojo 1.0.0 pixi environment regenerated schema-3 bundle `2e89bda4bc15fb935f5df9cb1a43f029336653ef095bea62d60076dbb3d84f99`; public preflight and the changed dynamic loader then created one Apple M4 Metal session and executed two requests | The strict package run passed 58 tests / 59 runs, including 6 Core and 7 runtime tests, with failure 0 and skip 0; real Metal returned `[41, 42]` then `[43, 44]` at `/tmp/kuyu-mojo-multibinding-full-dd/Logs/Test/Test-kuyu-mojo-Package-2026.08.23_01-26-58-+0900.xcresult` |
 
-This slice generalizes the verified runtime boundary required by transactional
+At this milestone, this slice generalized the verified runtime boundary required by transactional
 optimizer proposal, commit, discard, read, and checkpoint operations. The
-current accepted dynamics bundle still contains one execution binding; an
-accelerator-resident Adam implementation and its platform artifacts remain a
-separate implementation gate.
+accepted dynamics bundle contained one execution binding, and the
+accelerator-resident Adam implementation was still a separate gate. The newer
+section above records its subsequent Apple Metal acceptance.
 
 ## 2026-08-22 schema-3 callable accelerator session
 

@@ -193,12 +193,18 @@ struct KuyuManasMojoAdamOptimizerSessionFactoryTests {
       ),
       requirement: try Self.realMetalRequirement()
     )
-    let metal = try metalFactory.session(
+    let metalSession = try metalFactory.session(
       configuration: configuration,
       initialState: initialState
     )
+    let metal = try #require(
+      metalSession as? ManasMojoAdamOptimizerSession
+    )
     defer {
-      for session in [cpu as any ManasAdamOptimizerSession, metal] {
+      for session in [
+        cpu as any ManasAdamOptimizerSession,
+        metal as any ManasAdamOptimizerSession,
+      ] {
         do {
           try session.shutdown()
         } catch {
@@ -233,20 +239,8 @@ struct KuyuManasMojoAdamOptimizerSessionFactoryTests {
         layout: layout,
         values: values
       )
-      let cpuProposal = try cpu.proposal(for: gradients)
-      let metalProposal = try metal.proposal(for: gradients)
-      Self.expectClose(
-        metalProposal.descentDirection.values,
-        cpuProposal.descentDirection.values
-      )
-      let cpuMetrics = try cpu.commit(
-        cpuProposal,
-        descentDirection: cpuProposal.descentDirection
-      )
-      let metalMetrics = try metal.commit(
-        metalProposal,
-        descentDirection: metalProposal.descentDirection
-      )
+      let cpuMetrics = try cpu.update(gradients)
+      let metalMetrics = try metal.update(gradients)
       #expect(metalMetrics.updateCount == cpuMetrics.updateCount)
       #expect(
         abs(
@@ -264,7 +258,155 @@ struct KuyuManasMojoAdamOptimizerSessionFactoryTests {
         try metal.checkpoint(),
         try cpu.checkpoint()
       )
+      let expectedProfile = try ManasMojoAdamUpdateProfile(
+        hostToDeviceFullVectorTransfers: 1,
+        deviceToHostFullVectorTransfers: 0,
+        deviceToHostSummaryElementTransfers: 8,
+        deviceSynchronizations: 2
+      )
+      #expect(
+        metal.lastUpdateProfile == expectedProfile
+      )
     }
+
+    let beforeFailure = try metal.checkpoint()
+    #expect {
+      _ = try metal.update(
+        ManasAdamGradientVector(
+          layout: layout,
+          values: [Float.greatestFiniteMagnitude, 0, 0, 0]
+        )
+      )
+    } throws: { error in
+      error as? ManasMojoAdamOptimizerError == .arithmeticFailure
+    }
+    #expect(try metal.checkpoint() == beforeFailure)
+    let recovery = try metal.update(
+      ManasAdamGradientVector(
+        layout: layout,
+        values: [0.1, -0.1, 0.2, -0.2]
+      )
+    )
+    #expect(
+      recovery.updateCount == beforeFailure.state.updateCount + 1
+    )
+  }
+
+  @Test(.timeLimit(.minutes(2)))
+  func benchmarksOptInFusedMetalUpdateAgainstProjectedPath() throws {
+    let environment = ProcessInfo.processInfo.environment
+    guard
+      environment["KUYU_MOJO_RUN_ADAM_BENCHMARK"] == "1",
+      let bundlePath = environment[
+        "KUYU_MOJO_TEST_ADAM_ACCELERATOR_LIBRARY_BUNDLE"
+      ]
+    else {
+      return
+    }
+    let parameterCount = 1_048_576
+    let warmupCount = 2
+    let iterationCount = 12
+    let layout = try ManasAdamParameterLayout(
+      entries: [
+        try ManasAdamParameterLayout.Entry(
+          name: "parameters",
+          shape: [parameterCount]
+        )
+      ]
+    )
+    let initialState = try ManasAdamState(
+      layout: layout,
+      parameters: [Float](
+        repeating: 0.25,
+        count: parameterCount
+      )
+    )
+    let configuration = try ManasAdamConfiguration(
+      learningRate: 0.0013,
+      beta1: 0.7,
+      beta2: 0.93,
+      epsilon: 1.0e-5
+    )
+    let factory = try KuyuManasMojoAdamOptimizerSessionFactory(
+      bundleURL: URL(fileURLWithPath: bundlePath, isDirectory: true),
+      requirement: try Self.realMetalRequirement()
+    )
+    let fusedSession = try factory.session(
+      configuration: configuration,
+      initialState: initialState
+    )
+    let fused = try #require(
+      fusedSession as? ManasMojoAdamOptimizerSession
+    )
+    let projectedSession = try factory.session(
+      configuration: configuration,
+      initialState: initialState
+    )
+    let projected = try #require(
+      projectedSession as? ManasMojoAdamOptimizerSession
+    )
+    defer {
+      for session in [fused, projected] {
+        do {
+          try session.shutdown()
+        } catch {
+          Issue.record("Optimizer shutdown failed: \(error)")
+        }
+      }
+    }
+    let gradients = try ManasAdamGradientVector(
+      layout: layout,
+      values: [Float](repeating: 0.5, count: parameterCount)
+    )
+
+    for _ in 0..<warmupCount {
+      _ = try fused.update(gradients)
+      let proposal = try projected.proposal(for: gradients)
+      _ = try projected.commit(
+        proposal,
+        descentDirection: proposal.descentDirection
+      )
+    }
+
+    let clock = ContinuousClock()
+    let fusedStart = clock.now
+    for _ in 0..<iterationCount {
+      _ = try fused.update(gradients)
+    }
+    let fusedDuration = fusedStart.duration(to: clock.now)
+
+    let projectedStart = clock.now
+    for _ in 0..<iterationCount {
+      let proposal = try projected.proposal(for: gradients)
+      _ = try projected.commit(
+        proposal,
+        descentDirection: proposal.descentDirection
+      )
+    }
+    let projectedDuration = projectedStart.duration(to: clock.now)
+
+    let fusedSeconds = Self.seconds(fusedDuration)
+    let projectedSeconds = Self.seconds(projectedDuration)
+    let fusedMillisecondsPerUpdate =
+      1_000 * fusedSeconds / Double(iterationCount)
+    let projectedMillisecondsPerUpdate =
+      1_000 * projectedSeconds / Double(iterationCount)
+    let speedup = projectedSeconds / fusedSeconds
+    print(
+      "KUYU_MOJO_ADAM_BENCHMARK "
+        + "parameterCount=\(parameterCount) "
+        + "iterations=\(iterationCount) "
+        + "fusedMillisecondsPerUpdate=\(fusedMillisecondsPerUpdate) "
+        + "projectedMillisecondsPerUpdate="
+        + "\(projectedMillisecondsPerUpdate) "
+        + "speedup=\(speedup)"
+    )
+
+    #expect(fusedSeconds > 0)
+    #expect(projectedSeconds > 0)
+    #expect(
+      fused.lastUpdateProfile?.deviceToHostFullVectorTransfers == 0
+    )
   }
 
   private static func initialState() throws -> ManasAdamState {
@@ -284,9 +426,9 @@ struct KuyuManasMojoAdamOptimizerSessionFactoryTests {
   {
     try MojoAcceleratorRuntimeBundleRequirement(
       bundleDigest:
-        "daaaaaa311e3a61729ff11368f71c0b95fd0f97273c73069f9c81e03661df161",
+        "5ee189b92b7983583bec2b896e6b50f58ecc28df0247fd83fc3b2a9b742c5198",
       receiptDigest:
-        "bae966a967f03da812abba0e0c081118978d831697fcb62e9a9db9084c6ba1f0",
+        "40e9ac97ad5467995bb712a99d1c3aec1162df674cc9de8549b75850f8927f16",
       target: MojoRuntimeBundleTarget(
         triple: "arm64-apple-macosx14.0",
         cpu: "apple-m4",
@@ -294,8 +436,8 @@ struct KuyuManasMojoAdamOptimizerSessionFactoryTests {
       ),
       moduleName: "SwiftMojo_ManasMojoAdamAccelerator_ABI",
       inputGraphDigest:
-        "e5c98830809ab66bcfb278362f375c3e2be95d4e81b9a424951f1715fb83b4ba",
-      inputGraphIdentifier: 7_334_543_210_046_994_027,
+        "01d227cf470d32edcd9247f8e4a4100905d954242b500ca73c7372c368928849",
+      inputGraphIdentifier: 131_211_110_350_926_573,
       sessionFactoryFunctionName:
         ManasMojoAdamABI.sessionFactoryFunctionName,
       executionFunctionNames:
@@ -330,6 +472,12 @@ struct KuyuManasMojoAdamOptimizerSessionFactoryTests {
     for (actualValue, expectedValue) in zip(actual, expected) {
       #expect(abs(actualValue - expectedValue) <= tolerance)
     }
+  }
+
+  private static func seconds(_ duration: Duration) -> Double {
+    let components = duration.components
+    return Double(components.seconds)
+      + Double(components.attoseconds) / 1.0e18
   }
 }
 
