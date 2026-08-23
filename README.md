@@ -1,215 +1,102 @@
 # kuyu-mojo
 
-Portable Mojo compute backends for Kuyu. KuyuPhysics owns canonical dynamics
-semantics; this package compiles and executes those programs without defining a
-second set of equations.
+Mojo compute implementations and Kuyu-to-Manas composition. KuyuPhysics owns
+canonical dynamics, KuyuTraining owns persisted learning evidence, and Manas
+owns model and optimizer semantics. This package binds those contracts without
+creating a second authority for any of them.
 
-## Production Direction
+## Active Products
 
-Mojo 1.0.0 is the sole production compute substrate. Models, inference,
-automatic differentiation, rollout tensor execution, GAE/PPO/SHAC, optimizer
-arithmetic, and learned world-model compute are implemented in Mojo. Swift
-consumes them through `swift-mojo` and typed Kuyu/Manas adapters; Swift does not
-contain a parallel tensor or training implementation.
+| Product | Responsibility |
+|---|---|
+| `KuyuMojoCore` | Verified Mojo artifact and accelerator-runtime admission |
+| `KuyuMojoDynamics` | Compile and execute canonical Kuyu dynamics programs |
+| `KuyuManasMojoAdapter` | Convert verified KuyuDataset v7 records to Manas learning contracts |
+| `KuyuMojoTrainingRuntime` | Execute one bounded dataset-to-candidate learning update |
 
-MLX is not a fallback, compatibility backend, differential reference, test
-oracle, or deployment option. Missing Mojo capabilities fail explicitly. The
-complete Manas PPO learning session is available through the typed Kuyu
-adapter. Generic campaign/worker integration, accelerator-resident PPO, learned
-world-model products, and native Jetson deployment remain implementation or
-qualification gaps; those gaps do not authorize retaining MLX execution.
+`KuyuMojoTrainingRuntime` also retains target-qualified worker artifact
+preflight as optional accelerator plumbing. The bounded application path calls
+the in-process training service directly; worker admission is not a hidden
+fallback and does not select another numerical backend.
+
+## Learning Path
+
+```mermaid
+flowchart LR
+  Request["LearningUpdateRequest"] --> Service["KuyuMojoTrainingService"]
+  Dataset["KuyuDataset v7"] --> Adapter["KuyuManasMojoAdapter"]
+  Source["Manas source bundle"] --> Service
+  Adapter --> Service
+  Service --> Session["ManasMojoPPOTrainingSession"]
+  Session --> Writer["ManasMojoTrainingCandidateWriter"]
+  Writer --> Candidate["Atomic reloadable model bundle"]
+```
+
+The service:
+
+1. validates source and dataset identities and binds behavior evidence to the
+   exact SHA-256-pinned source checkpoint;
+2. verifies exact behavior-distribution and recurrent-trajectory evidence;
+3. enforces transition and complete-scalar budgets;
+4. executes Core forward, GAE, clipped PPO, recurrent BPTT, gradient clipping,
+   and Adam in a Mojo-owned session;
+5. snapshots the complete model and optimizer state; and
+6. publishes atomically, then reloads the result through the production Manas
+   loader before returning success.
+
+When the source is a prior candidate, the service restores all parameters,
+both Adam moment vectors, the update count, and the Lagrange multiplier. A base
+bundle without a training checkpoint takes the explicit fresh-initialization
+path; there is no silent partial resume.
+
+The default bounded profile accepts at most 256 transitions and 8,000,000
+materialized scalars. A trajectory larger than the configured exact recurrent
+minibatch is rejected; it is not silently truncated or split across invalid
+sequence boundaries.
+
+Cancellation before publication leaves no candidate. Publication is the atomic
+commit point. Existing destination directories are never overwritten.
+
+## Performance Direction
+
+The current controller has 69,323 trainable parameters. On the designated M4
+Max, the 32-transition production update measures about 2.9 ms after
+initialization and is protected by a 10 ms budget. CPU SIMD is intentional for
+this shape because it avoids accelerator launch, synchronization, and transfer
+overhead. It is implemented in Mojo, not Swift tensor code.
+
+Mojo does not erase Apple/NVIDIA hardware differences. `swift-mojo` verifies
+target-qualified artifacts by triple, architecture, runtime closure, and digest.
+An accelerator-resident PPO session is admitted only if a larger measured
+workload fails the CPU budget.
 
 ## Platform Roles
 
-The designated MacBook M4 Max is the primary training, evaluation, benchmark,
-and checkpoint-publication platform. `kuyu-mojo` optimizes the whole training
-session there: model execution, rollout tensors, GAE, autodiff, losses,
-optimizer state, rollback, reductions, and checkpoint export.
+- The Apple Silicon Mac is the training, evaluation, tuning, and candidate
+  publication host.
+- Jetson AGX Orin consumes accepted artifacts for inference, real-time control,
+  and HIL verification.
+- Cross-generation is not Jetson execution evidence. Native Jetson load,
+  inference parity, latency, memory/power, cancellation, shutdown, and safety
+  gates remain mandatory before robot deployment.
 
-Jetson AGX Orin consumes accepted artifacts for inference, real-time control,
-and HIL/robot verification. Native Jetson artifact acceptance remains required
-for robot deployment, but Jetson optimizer throughput is not a training gate
-and Jetson is not a remote training fallback.
+## Verification
 
-```text
-CanonicalDynamicsProgram
-    -> KuyuMojoProgramCompiler
-        -> immutable numeric-specific SSA plan
-            -> Mojo Float64 / Float32 CPU execution
-            -> Float32 plan + batched runtime inputs
-                -> backend-neutral accelerator acceptance source
-                    -> Apple target artifact (native accepted)
-                    -> Jetson target handoff (cross-compiled)
-```
-
-The current runtime-verified slices include deterministic macOS CPU Float64 and
-Float32 execution and bounded Apple M4 Metal Float32 execution of the same
-canonical SSA plans. Float64 remains the semantic verifier. Float32 establishes
-the explicit precision boundary required by Apple Metal and NVIDIA CUDA. The
-backend-neutral acceptance generator compiles the reference program once for
-CPU and accelerator identities, proves that all graph plans and bindings are
-identical, and then compares all outputs of nine force graphs, the derivative
-graph, and the observable graph for two scenarios. Kuyu passes only the
-`accelerator` class; the prepared Mojo artifact owns Metal, CUDA, or another
-concrete target identity. One GPU thread owns each
-graph instance; plan and runtime input storage are transferred separately, and
-host-visible results are read only after explicit synchronization.
-
-`MojoScalarDynamicsExecutor` also conforms directly to KuyuPhysics'
-`ReferenceQuadrotorCanonicalExecuting` boundary. The production
-`ReferenceQuadrotorPlantEngine` and `IMU6SensorField` accept that executor as a
-single retained dependency. Integration tests advance the real plant for eight
-RK4 ticks and sample the real IMU through both Mojo Float64 and Float32, compare
-every state and sensor channel against the Swift scalar oracle, and exercise no
-fallback branch.
-
-The canonical acceptance executable is an evidence tool, not the public Kuyu
-runtime executor or training worker. It creates a bounded device context for
-each acceptance call and deliberately omits worker lifecycle, cancellation,
-progress, performance qualification, and artifact publication. Those concerns
-remain at the attempt-owned worker boundary. The CPU ABIs remain packaged in a
-Linux ARM64 static library. The CUDA acceptance source is instead preserved as
-a digest-bound AArch64 ELF handoff for native acceptance on Jetson.
-Cross-compilation is not native execution evidence; native linking, device
-execution, and Jetson `sm_87` qualification retain separate acceptance gates.
-
-Prepare that handoff from the pinned Modular pixi workspace with:
+Use the Xcode path so generated Mojo frameworks and the actual application
+loader are exercised:
 
 ```bash
-KUYU_MOJO_MAX_PIXI_PROJECT=/absolute/path/to/pixi-workspace \
-  scripts/prepare-cuda-canonical-acceptance.sh \
-  /absolute/path/to/new-output-directory
+xcodebuild build-for-testing \
+  -scheme kuyu-mojo-Package \
+  -destination 'platform=macOS' \
+  -skipPackagePluginValidation
+
+xcodebuild test \
+  -scheme kuyu-mojo-Package \
+  -destination 'platform=macOS' \
+  -maximum-test-execution-time-allowance 60 \
+  -skipPackagePluginValidation
 ```
 
-The output contains `CanonicalCUDAAcceptance.mojo`, its AArch64 ELF object, the
-complete imported `Mojo/KuyuCanonicalDynamics` source closure, and
-`CrossCompileEvidence.json`. The object is compiled against the copied closure,
-not the repository source tree. The evidence records the canonical program,
-source, object and module-closure digests, host/CPU/accelerator targets,
-embedded PTX identity, Mojo version, and pixi manifest/lock digests. It always
-records `artifactStatus: crossCompiledOnly` and `nativeAcceptance: false`; only
-native Jetson acceptance may advance those claims.
-
-When an admitted Jetson is reachable, run the native gate with a new evidence
-directory:
-
-```bash
-scripts/accept-cuda-canonical-on-jetson.sh \
-  /absolute/path/to/cuda-handoff \
-  /absolute/path/to/new-native-evidence-directory \
-  wendyos-valiant-iris.local
-```
-
-The host gate validates the handoff before contacting the device, requires
-WendyOS `0.18.1`, AArch64, NVIDIA, and Jetson Orin identities, and only then
-builds and runs the digest-pinned MAX acceptance container. Both accepted and
-post-contact failed attempts preserve device info, the run log, the exact
-cross-compile evidence, Wendy CLI identity, and a typed native receipt. An
-offline device produces a failed receipt and no deploy; an OS mismatch is
-rejected before build or deployment.
-
-The pinned swift-mojo revision provides schema-3 callable runtime-library
-bundles and a public read-only verifier. KuyuMojoCore's
-`MojoAcceleratorRuntimeBundlePreflighting` boundary admits a library only after
-the schema, bundle and receipt digests, target, module, input graph, generated
-header, managed tree, loader policy, and the typed session-factory/execution
-binding relationship pass validation. `KuyuMojoAcceleratorRuntime` then loads
-only the verified dylib, checks its static ABI, graph identity, and binding IDs,
-and retains the loader image for every session borrow. One factory may own an
-ordered set of named execution bindings; the first remains the default for
-single-operation bundles, while unknown names and duplicate names or binding
-IDs fail without selecting another operation or CPU fallback. The generated
-Metal session library and its exact four-library
-AsyncRT/KGEN closure produce receipt
-`3969ad6b6d12dd2416aa745bdc4037ad2faba85bd24b34d0abd3d5eb1c8be747`
-and bundle
-`2e89bda4bc15fb935f5df9cb1a43f029336653ef095bea62d60076dbb3d84f99`.
-Fresh verification plus an `env -i` probe and the Swift loader execute repeated
-canonical graph calls through one persistent Apple M4 Metal session, followed
-by ordered session and library shutdown.
-
-`KuyuMojoTrainingRuntime` composes that backend-owned verification with
-`KuyuTrainingRuntime`'s generic executable-bundle contract. A
-`MojoTrainingWorkerBundleLayout` keeps the real Kuyu worker executable outside
-the nested accelerator runtime. `MojoTrainingWorkerBundlePreflight` returns the
-outer Kuyu worker as the executable source while independently re-verifying the
-nested runtime on both source and attempt-owned staged roots. The generic
-stager hashes and makes the complete outer tree read-only. A process test places
-`/usr/bin/true` at the Kuyu worker path and non-executable bytes at the nested
-accelerator-library path; the generic launcher reaches only the former and
-reports its zero exit before the expected missing-outcome failure. A real-bundle
-test also re-verifies the schema-3 library after it is copied into the
-attempt-owned staged tree. Progress, cancellation, result publication, and
-worker crash recovery remain separate acceptance gates.
-
-`KuyuManasMojoAdapter` is the sole typed conversion boundary from persisted
-KuyuDataset v7 artifacts to Manas-owned in-memory learning contracts. It uses
-KuyuTraining's bounded snapshot reader and digest validation, recomputes exact
-on-policy distribution evidence including transform Jacobians, applies an
-injected `ManasLearningInputEncoding`, enforces transition and complete Float
-scalar budgets, and returns an immutable validated `ManasOnPolicyTrajectory`.
-The exact verifier is owned by the adapter and cannot be replaced by a caller.
-The direct-coordinate encoder requires explicit contract digests and rejects
-lossy `Double`-to-`Float` conversion.
-
-`KuyuManasMojoTrainingRun` composes that conversion with a
-`ManasMojoPPOTrainingSession`. One attempt loads the validated dataset, creates
-one Mojo session, executes PPO, snapshots an immutable checkpoint, and performs
-ordered shutdown on both success and failure. Kuyu does not implement tensor
-math: the Manas Mojo session owns exact Core forward execution, reward/cost
-GAE, transformed-action PPO, recurrent BPTT, gradient clipping, Adam, the
-Lagrange multiplier, transaction state, and checkpoint bytes. On the designated
-M4 Max, the representative 69,323-parameter, 32-transition session measures
-about 2.9 ms per update after initialization and has an executable 10 ms
-regression budget.
-
-The same target also provides
-`KuyuManasMojoAdamOptimizerSessionFactory`, which admits only a digest-verified
-accelerator bundle whose ordered operation set exactly matches Manas' public
-Adam ABI. It always requests the backend-neutral `.accelerator` device class;
-the verified artifact carries the concrete deployment target. Its transport
-owns the dynamic session and library, routes opaque
-Float32 payloads without interpreting them, and shuts down the session before
-the runtime. Manas continues to own payload validation, proposal identity,
-fused updates, transfer telemetry, transactional commit/discard, and checkpoint
-semantics. This target imports
-neither MLX nor MAX and does not own dataset persistence, model structure,
-worker snapshots, or model-store gates.
-
-The same adapter now exposes separate Core and Reflex inference-session
-factories over Manas' public backend-neutral transport. Each factory admits
-only a digest-verified callable runtime whose factory name and ordered
-initialize/infer operations exactly match the corresponding Manas ABI, requests
-only the `.accelerator` device class, and transfers session ownership to the
-Manas model session. Manas still owns model materialization, payload validation,
-output decomposition, recurrent-state commit, and controller semantics. The
-Kuyu transport owns dynamic-library lifetime and closes the session before the
-runtime. This closes the Swift ownership and routing seam; real accelerator
-Core/Reflex kernels and hardware parity remain separate gates.
-
-The Manas-owned device implementation has now passed the first real optimizer
-accelerator gate. Verified Apple deployment bundle
-`5ee189b92b7983583bec2b896e6b50f58ecc28df0247fd83fc3b2a9b742c5198`
-was dynamically loaded through this adapter on Apple M4. One persistent Mojo
-session matched the static CPU session after proposal discard and three fused
-updates, including metrics, parameters, both moment vectors, and update count.
-An invalid arithmetic update left the complete checkpoint unchanged and the
-same session accepted the next valid update. For 1,048,576 parameters, two
-warm-up updates preceded 12 measured updates at 3.46–3.68 ms per fused update
-versus 389.28–485.37 ms for the
-explicit proposal/commit path, an observed 105.70–140.31× speedup across two
-runs. The fused path reports one
-full-vector host-to-device transfer, zero full-vector device-to-host transfers,
-and two synchronizations. This proves semantic accelerator execution and the
-first hot-path performance slice on Apple; it does not prove the complete Mojo
-RL backend, production cutover, peak memory, sustained thermal behavior, or
-native Jetson execution.
-
-The numerical and failure gates are defined in `PARITY_CONTRACT.md`, with
-executed results in `RELIABILITY_EVIDENCE.md`. The
-runtime identity binds the canonical program schema and digest to the executor
-version, numeric type, CPU device class, fidelity/projection declaration,
-control semantics, and mixer/spin convention.
-
-The final Metal/CUDA worker, MAX runtime deployment, ownership, and native
-acceptance contracts are defined in `ACCELERATOR_ARCHITECTURE.md`.
+Detailed numerical evidence is recorded in `RELIABILITY_EVIDENCE.md` and the
+canonical dynamics tolerances are defined in `PARITY_CONTRACT.md`.

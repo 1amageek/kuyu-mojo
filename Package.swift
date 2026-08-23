@@ -40,7 +40,7 @@ let package = Package(
     .package(path: "../manas"),
     .package(
       url: "https://github.com/1amageek/swift-mojo.git",
-      revision: "d5f58340bdb6c69152a4ad8710dd8c5266b14e90"
+      revision: "d033eda1c249317c071420e04b02e38fbd8f0796"
     ),
   ],
   targets: [
@@ -100,8 +100,22 @@ let package = Package(
       name: "KuyuMojoTrainingRuntime",
       dependencies: [
         "KuyuMojoCore",
+        "KuyuManasMojoAdapter",
+        .product(name: "ManasCore", package: "manas"),
+        .product(name: "ManasLearningContracts", package: "manas"),
+        .product(name: "ManasMojoModels", package: "manas"),
+        .product(name: "ManasMojoRuntime", package: "manas"),
+        .product(name: "ManasMojoTraining", package: "manas"),
+        .product(
+          name: "KuyuTrainingContracts",
+          package: "kuyu-training"
+        ),
         .product(
           name: "KuyuTrainingRuntime",
+          package: "kuyu-training"
+        ),
+        .product(
+          name: "KuyuTrainingValidation",
           package: "kuyu-training"
         ),
       ]
@@ -155,8 +169,14 @@ let package = Package(
       name: "KuyuMojoTrainingRuntimeTests",
       dependencies: [
         "KuyuMojoTrainingRuntime",
+        "KuyuManasMojoAdapter",
         "KuyuMojoCore",
         .product(name: "KuyuTraining", package: "kuyu-training"),
+        .product(name: "ManasCore", package: "manas"),
+        .product(name: "ManasLearningContracts", package: "manas"),
+        .product(name: "ManasMojoModels", package: "manas"),
+        .product(name: "ManasMojoRuntime", package: "manas"),
+        .product(name: "ManasMojoTraining", package: "manas"),
         .product(name: "MojoRuntime", package: "swift-mojo"),
       ]
     ),

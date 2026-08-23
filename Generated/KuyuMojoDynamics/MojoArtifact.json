@@ -1,6 +1,6 @@
 {
   "abiVersion" : 1,
-  "artifactDigest" : "cc66ce5fb97e5c751f4866822b0c176085ebdd6a2fbe76d470a23df6eb1d32fa",
+  "artifactDigest" : "9e729f9d76c27d4cd752fe09462fcbc7d77807a0d7b5509ea3c573925902fbfe",
   "artifactIdentity" : {
     "artifactName" : "SwiftMojo_KuyuMojoDynamics_ABI.xcframework",
     "libraryName" : "libSwiftMojo_KuyuMojoDynamics_ABI.a",
@@ -11,7 +11,7 @@
   "artifacts" : [
     {
       "adapter" : "appleXCFramework",
-      "digest" : "5ad7e89690535655f83256747d8f3eda8fc639377ac603801db95f55a18b1989",
+      "digest" : "b71d0d2a824ab9cd008953ac0ec5366eac90545661f2434ebbc4ea582825e325",
       "name" : "SwiftMojo_KuyuMojoDynamics_ABI.xcframework"
     },
     {
@@ -56,7 +56,7 @@
       }
     },
     {
-      "archiveDigest" : "bda4e582aaf5b85b639310486f5fb323b1d387a48abed74e4cc757a5c7cd6641",
+      "archiveDigest" : "217e4b35e400e6c4ce32f0fc4931e5dbc2b7c7ddf16e0ae8c292dea2c699991d",
       "libraryIdentifier" : "macos-arm64",
       "target" : {
         "cpu" : "generic",
